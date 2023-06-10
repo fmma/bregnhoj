@@ -1,7 +1,6 @@
 import { html, LitElement, nothing, PropertyValueMap } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { getHeight } from '../functions/getWidth';
 import { serverUrlPrefix } from '../constants';
 import { readFile } from '../functions/readFile';
 import { snap } from '../functions/snap';
@@ -9,14 +8,19 @@ import './Icon';
 import { getText } from './TextEditor';
 import type { Image, Pos, Rect, TextBlock, Tile } from './Types';
 
-const activeTiles = new Set<Btile>();
+// const activeTiles = new Set<Btile>();
 
 @customElement('b-tile')
 export class Btile extends LitElement {
 
+    get activeTiles(): Btile[] {
+        const x = [...document.querySelectorAll('b-tile[active]')] as Btile[];
+        return x;
+    }
+
     renderRoot = this;
 
-    @property({ type: Boolean })
+    @property({ type: Boolean, reflect: true })
     active = false;
 
     @property({ type: Object })
@@ -86,9 +90,10 @@ export class Btile extends LitElement {
     protected updated(changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
         if(changedProperties.has('active')) {
             if(this.active)
-                activeTiles.add(this);
+                //activeTiles.add(this);
+                0;
             else {
-                activeTiles.delete(this);
+                //activeTiles.delete(this);
                 if(this.editingText) {
 
                     this.edit(false)();
@@ -145,6 +150,8 @@ export class Btile extends LitElement {
     mouseup = (e: MouseEvent) => {
         this.dragging = undefined;
 
+        const { activeTiles } = this;
+
         if(this._hasMoved) {
             const detail: {rect: Rect, index: number}[] = [];
             for(const tile of activeTiles) {
@@ -185,7 +192,7 @@ export class Btile extends LitElement {
 
     mousemove = (e?: MouseEvent) => {
         this._hasMoved = true;
-        const { dragging } = this;
+        const { dragging, activeTiles } = this;
 
         if (!dragging)
             return;
@@ -203,10 +210,11 @@ export class Btile extends LitElement {
         const minY = Math.min(...[...activeTiles].map(t => t.rect?.y ?? 0));
         const maxX = Math.max(...[...activeTiles].map(t => (t.rect?.x ?? 0) + (t.rect?.w ?? 0)));
 
-        if(minY + dy < 0) {
+
+        if(['c', 'n', 'ne', 'nw'].includes(mode) && minY + dy < 0) {
             dy = 0;
         }
-        if(minX + dx < 0) {
+        if(['c', 'w', 'nw', 'sw'].includes(mode) && minX + dx < 0) {
             dx = 0;
         }
         const cw = 100;

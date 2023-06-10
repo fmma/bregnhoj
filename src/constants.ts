@@ -9,5 +9,5 @@ export const grid = 1;
 
 export const mobileBreakpoint = 1024;
 
-export const randomTable1 = [0,1,-1,2,-2];
-export const randomTable2 = [0,-2,1,-1,2];
+export const randomTable1 = [0,10,-6,15,0,-5, 9];
+export const randomTable2 = [0,-20,15,-3,12,-10,-5];

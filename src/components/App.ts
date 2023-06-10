@@ -27,6 +27,10 @@ export class Bapp extends LitElement {
 
     renderRoot = this;
 
+    _setLoading = (e: CustomEvent<{i: number, n: number} | undefined>) => {
+        this.loading = e.detail;
+    }
+
     _siteRoot?: string;
     @property({type: String, reflect: true, attribute: 'site-root'})
     set siteRoot(x: string) {
@@ -56,6 +60,9 @@ export class Bapp extends LitElement {
 
     @state()
     saving = false;
+
+    @state()
+    loading?: { i: number, n: number}
 
     @state()
     mobile = isMobile();
@@ -493,7 +500,7 @@ export class Bapp extends LitElement {
     }
 
     render() {
-        const { gem, startEditting, updatePageOrSubPage, updatePages, updatePreviewTile, openPreview, pages, mobile, saving } = this;
+        const { updatePageOrSubPage, updatePages, updatePreviewTile, openPreview, pages, mobile } = this;
 
 
         if(this._isSiteVersionsOpened) {
@@ -523,6 +530,12 @@ export class Bapp extends LitElement {
                 `
                 : nothing;
 
+        if(this.loading) {
+            return html`
+                <progress min="0" max="${this.loading.n}" value=${this.loading.i}></progress>
+            `
+        }
+
         return html`
             <b-image-preview .tile=${this.previewTile} @update-preview-tile=${updatePreviewTile} @close-preview=${() => this.previewTileIndex = undefined} .editting=${this.editting} .mobile=${mobile} .viewport=${this._viewport}></b-image-preview>
             <div class="outer">
@@ -534,28 +547,10 @@ export class Bapp extends LitElement {
                         `
                     }
                     <div class="page-wrapper">
-                        ${ mobile && !this.commingFromDesktop ? nothing
-                        : html`
-                            <div class="buttons${mobile ? '-mobile' : ''}">
-                                ${
-                                    mobile
-                                    ? nothing
-                                    : this.editting
-                                        ? html`
-                                            <b-icon title="filer" @click=${this.openSiteVersions} .disabled=${!this.canOpenSiteVersions} icon="folder-tree"></b-icon>
-                                            <b-icon title="undo" @click=${this.undo} .disabled=${saving || !this.canUndo} icon="undo"></b-icon>
-                                            <b-icon title="redo" @click=${this.redo} .disabled=${saving || !this.canRedo} icon="redo"></b-icon>
-                                            <b-icon @click=${gem} .disabled=${saving || !this.canSave} icon="save"></b-icon>
-                                            <b-icon @click=${this.stopEditting} icon="close"></b-icon>
-                                        `
-                                        : html`<b-icon @click=${startEditting} icon="admin"></b-icon>`
-                                }
-                                <b-icon @click=${this.toggleMobile} icon="${this.mobile ? 'desktop' : 'mobile'}"></b-icon>
-                            </div>
-                        `
+                        ${this._renderButtons()
                         }
 
-                        <b-page .mobile=${mobile} .page=${page} @update-page=${updatePageOrSubPage} @open-preview=${openPreview} .editting=${this.editting} .viewport=${this._viewport}></b-page>
+                        <b-page .mobile=${mobile} .page=${page} @update-page=${updatePageOrSubPage} @open-preview=${openPreview} @b-set-loading=${this._setLoading} .editting=${this.editting} .viewport=${this._viewport}></b-page>
                     </div>
 
                     <div class="footer">
@@ -564,5 +559,32 @@ export class Bapp extends LitElement {
                 </div>
             </div>
         `;
+    }
+
+    private _renderButtons() {
+        const { gem, startEditting, mobile, saving } = this;
+
+        if(!location.search.includes('admin'))
+            return nothing;
+
+        return mobile && !this.commingFromDesktop ? nothing
+        : html`
+            <div class="buttons${mobile ? '-mobile' : ''}">
+                ${
+                    mobile
+                    ? nothing
+                    : this.editting
+                        ? html`
+                            <b-icon title="filer" @click=${this.openSiteVersions} .disabled=${!this.canOpenSiteVersions} icon="folder-tree"></b-icon>
+                            <b-icon title="undo" @click=${this.undo} .disabled=${saving || !this.canUndo} icon="undo"></b-icon>
+                            <b-icon title="redo" @click=${this.redo} .disabled=${saving || !this.canRedo} icon="redo"></b-icon>
+                            <b-icon @click=${gem} .disabled=${saving || !this.canSave} icon="save"></b-icon>
+                            <b-icon @click=${this.stopEditting} icon="close"></b-icon>
+                        `
+                        : html`<b-icon @click=${startEditting} icon="admin"></b-icon>`
+                }
+                <b-icon @click=${this.toggleMobile} icon="${this.mobile ? 'desktop' : 'mobile'}"></b-icon>
+            </div>
+        `
     }
 }

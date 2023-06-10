@@ -62,6 +62,13 @@ export class Bpage extends LitElement {
         this.tiles = [...this.tiles, newIm];
     }
 
+    newTiles = (e: CustomEvent<Tile[]>) => {
+        const newIm = e.detail.map(x => ({
+            ...x
+        }));
+        this.tiles = [...this.tiles, ...newIm];
+    }
+
     activateTile = (i: number) => (e: CustomEvent<boolean>) => {
         if(e.detail) {
             if(this.activeTiles.includes(i)) {
@@ -106,11 +113,11 @@ export class Bpage extends LitElement {
     };
 
     render() {
-        const { newTile, deleteTile, updateTile, updateRects, activateTile, activeTiles, tiles, page, mobile } = this;
+        const { newTile, deleteTile, updateTile, updateRects, activateTile, activeTiles, tiles, page, mobile, editting } = this;
 
         return html`
             <h1 class="page-header">${page.title}</h1>
-            <div class="page-contents">
+            <div class="page-contents ${editting && !mobile ? "editting" : ""}">
                 ${tiles.map((x, i) => mobile
                 ? html`
                     <b-tile-mobile .tile=${x} @open-preview=${this.openPreview(i)} .width=${this.viewport.width}></b-tile-mobile>
@@ -124,7 +131,7 @@ export class Bpage extends LitElement {
                     ></b-tile>
                 `)}
 
-                ${mobile || ! this.editting ? nothing : html`<b-new-tiles .tiles=${tiles} @new-tile=${newTile} .viewport=${this.viewport}></b-new-tiles>`}
+                ${mobile || ! this.editting ? nothing : html`<b-new-tiles .tiles=${tiles} @new-tile=${newTile} @new-tiles=${this.newTiles} .viewport=${this.viewport}></b-new-tiles>`}
             </div>
         `
     }

@@ -1,106 +1,135 @@
-import { html, LitElement, PropertyValueMap } from 'lit';
-import { customElement, property, query } from 'lit/decorators.js';
-import { defaultHeight, defaultWidth, grid, minDefaultHeight, minDefaultWidth, randomTable1, randomTable2 } from '../constants';
+import { html, LitElement } from 'lit';
+import { customElement, property, query, state } from 'lit/decorators.js';
+import { grid } from '../constants';
 import { readFile } from '../functions/readFile';
-import { posSortFun } from '../functions/rectSortFunc';
 import { snap } from '../functions/snap';
+import { Bitmap } from '../models/bitmap';
 import type { Rect, Tile, Viewport } from './Types';
 
 @customElement('b-new-tiles')
 export class BnewTiles extends LitElement {
 
-    @property({type: Object})
-    viewport: Viewport = {width: 0, pixelRatio: 1};
+    @property({ type: Object })
+    viewport: Viewport = { width: 0, pixelRatio: 1 };
 
     renderRoot = this;
-
-    @property({ type: Number })
-    n = 4;
 
     @property({ type: Array })
     tiles: Tile[] = [];
 
-    @property({ type: Number})
+    @property({ type: Number })
     maxY = 0;
 
     @query('.outer')
     div!: HTMLDivElement;
 
-    expanse?: { minX: number; minY: number, maxX: number, maxY: number, points: [number, number][] };
+    @state()
     rects: Rect[] = [];
 
-    protected update(changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
+    bitmap = new Bitmap();
 
-        const { tiles } = this;
-        const minY = Math.min(grid, ...tiles.map(i => i.rect.y + i.rect.h));
-        const minX = grid;
-        const maxY = Math.max(0, ...tiles.map(i => i.rect.y + i.rect.h));
-        const maxX = 100 - 2 * grid;
-
-        let points: [number, number][] = [];
-
-        for (let y = minY; y <= maxY + minDefaultHeight; y += grid) {
-            for (let x = minX; x <= maxX - minDefaultWidth; x += grid) {
-                points.push([x, y]);
-            }
+    protected update(changedProperties: Map<keyof this, any>): void {
+        if (changedProperties.has('tiles')) {
+            this.bitmap.reset(this.tiles.map(x => x.rect));
+            const r = this.bitmap.nextRect(false);
+            this.rects = r ? [r] : [];
         }
-        points.sort(([x1, y1], [x2, y2]) => posSortFun({x: x1, y: y1}, {x: x2, y: y2}));
-        this.expanse = { minX, minY, maxX, maxY, points };
-
-        this.rects = this.calc();
-        this.maxY = Math.max(maxY, ...this.rects.map(x => x.h + x.y));
-
         super.update(changedProperties);
     }
 
     newText = (r: Rect, index: number) => () => {
 
-        const detail: Tile = {rect: r, textBlock: {text: '<h1>Overskrift</h1><p>Skriv tekst her</p>'}}
+        const detail: Tile = { rect: r, textBlock: { text: '<h1>Overskrift</h1><p>Skriv tekst her</p>' } }
 
         this.dispatchEvent(new CustomEvent('new-tile', { detail }));
     }
 
     fileChange = (_: Rect, index: number) => async (e: Event) => {
         const fileInput = e.composedPath()[0] as HTMLInputElement;
+        const newTiles: Tile[] = [];
+        const batch = (fileInput.files?.length ?? 0) > 1;
+        let rect = { ...this.rects[index] };
         if (fileInput.files?.[0]) {
-            for (const f of fileInput.files ?? []) {
-                let rect = this.rects[index];
-                if (rect == null) {
-                    this.rects = this.calc();
-                    index = 0;
-                    rect = this.rects[0];
-                }
-                index++;
+            for (const [i, f] of [...fileInput.files ?? []].entries()) {
+
+                if (batch)
+                    this.dispatchEvent(new CustomEvent('b-set-loading', {
+                        detail: { i, n: fileInput.files!.length },
+                        bubbles: true,
+                        cancelable: true,
+                        composed: true
+                    }));
                 const { compressed, uncompressed, thumbnail, w, h, ogw, ogh } = await readFile(f);
+
                 const factor = Math.min(rect.w / w, rect.h / h);
 
                 rect.w = snap(w * factor);
                 rect.h = snap(h * factor);
-                const detail: Tile = { rect, image: {
-                    isNew: true,
-                    url: `url(${thumbnail})`,
-                    bigurl: `url(${uncompressed})`,
-                    file: f,
-                    compressedFile: compressed,
-                    w: w,
-                    h: h,
-                    ogw,
-                    ogh
-                }};
-                this.dispatchEvent(new CustomEvent('new-tile', { detail }));
+
+                this.bitmap.flowUp(rect);
+                this.bitmap.flowLeft(rect);
+
+                const detail: Tile = {
+                    rect,
+                    image: {
+                        isNew: true,
+                        url: `url(${thumbnail})`,
+                        bigurl: `url(${uncompressed})`,
+                        file: f,
+                        compressedFile: compressed,
+                        w,
+                        h,
+                        ogw,
+                        ogh
+                    }
+                };
+
+                newTiles.push(detail);
+                this.bitmap.addRect(rect);
+                rect = this.bitmap.nextRect(true);
             }
-            fileInput.value = ''
+            fileInput.value = '';
+
+            if (batch) {
+                this.bitmap.h = newTiles.map(x => x.rect.h + x.rect.y).reduce((a, b) => a > b ? a : b);
+                for (const t of newTiles) {
+                    // this.bitmap.grow(t.rect);
+                    this.bitmap.addRect(t.rect);
+                }
+                for (const t of newTiles) {
+                    t.rect.w -= grid;
+                    t.rect.h -= grid;
+                }
+
+                const sortedRects = newTiles.map(x => x.rect).sort((a, b) => a.w / a.h - b.w / b.h);
+                const sortedIms = newTiles.map(x => x.image!).sort((a, b) => a.w / a.h - b.w / b.h);
+
+                for (let i = 0; i < newTiles.length; ++i) {
+                    newTiles[i].rect = sortedRects[i];
+                    newTiles[i].image = sortedIms[i];
+                }
+            }
+
+            this.dispatchEvent(new CustomEvent('new-tiles', { detail: newTiles }));
+
+            this.dispatchEvent(new CustomEvent('b-set-loading', {
+                detail: undefined,
+                bubbles: true,
+                cancelable: true,
+                composed: true
+            }));
         }
     }
 
-    renderNewTile = (r: Rect, i: number) => {
-        const {  fileChange, newText, viewport } = this;
+    private _renderNewTile = (r: Rect, i: number) => {
+        const { fileChange, newText, viewport } = this;
         const k = viewport.pixelRatio;
+        const style = `left:${r.x * k}vw;top:${r.y * k}vw;width:${r.w * k}vw;height:${r.h * k}vw;`;
         return html`
-            <div class="new-tile-outer"
-                style="left:${r.x * k}vw;top:${r.y * k}vw;width:${r.w * k}vw;height:${r.h * k}vw;">
+            <div class="new-tile-outer" style="${style}">
                 <span>
-                    <input class="new-tile-input" type="file" accept="image/jpeg, image/png, image/jpg" @change=${fileChange(r, i)} multiple>
+                    <input class="new-tile-input" type="file" accept="image/jpeg, image/png, image/jpg" @change=${fileChange(r, i)}
+                        multiple>
                 </span>
                 <span>
                     <button class="new-tile-button" @click=${newText(r, i)}>Tekst</button>
@@ -110,9 +139,9 @@ export class BnewTiles extends LitElement {
     };
 
     render() {
-        const { renderNewTile, rects } = this;
+        const { rects } = this;
         return html`
-            ${rects.map(renderNewTile)}
+            ${rects.map(this._renderNewTile)}
         `;
     }
 
@@ -123,62 +152,6 @@ export class BnewTiles extends LitElement {
             && r2.y <= (r1.y + r1.h);
     }
 
-    calc() {
-        const { tiles, expanse, n } = this;
-
-        if (expanse == null)
-            return [];
-
-        const { points, maxX, maxY } = expanse;
-
-        const rects = tiles.map(x => x.rect);
-
-        const newRects: Rect[] = [];
-
-        for (let [x, y] of points) {
-            const r = { x, y, w: minDefaultHeight, h: minDefaultHeight };
-            if (rects.some(r1 => this.overlaps(r, r1)))
-                continue;
-            else {
-                while (true) {
-                    const canGrow = r.w < (defaultWidth + randomTable1[newRects.length]) && r.w + r.x < maxX;
-                    if (canGrow)
-                        r.w += grid;
-                    else
-                        break;
-                    const overlaps = rects.some(r1 => this.overlaps(r, r1));
-                    if (overlaps) {
-                        r.w -= grid;
-                        break;
-                    }
-                }
-                while (true) {
-                    const canGrow = r.h < (defaultHeight + randomTable2[newRects.length]);
-                    if (canGrow)
-                        r.h += grid;
-                    else
-                        break;
-                    const overlaps = rects.some(r1 => this.overlaps(r, r1));
-                    if (overlaps) {
-                        r.h -= grid;
-                        break;
-                    }
-                }
-
-                rects.push(r);
-                newRects.push(r);
-                if (newRects.length === n)
-                    return newRects;
-            }
-        }
-
-        if (newRects.length === 0) {
-            newRects.push({
-                x: grid, y: maxY + grid, w: defaultWidth, h: defaultHeight
-            });
-        }
-        return newRects;
-    }
 }
 
 
