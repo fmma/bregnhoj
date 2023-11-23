@@ -131,8 +131,9 @@ export class Bpage extends LitElement {
                     ></b-tile>
                 `)}
 
-                ${mobile || ! this.editting ? nothing : html`<b-new-tiles .tiles=${tiles} @new-tile=${newTile} @new-tiles=${this.newTiles} .viewport=${this.viewport}></b-new-tiles>`}
+
             </div>
         `
+        // ${mobile || ! this.editting ? nothing : html`<b-new-tiles .tiles=${tiles} @new-tile=${newTile} @new-tiles=${this.newTiles} .viewport=${this.viewport}></b-new-tiles>`}
     }
 }

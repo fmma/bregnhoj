@@ -7,7 +7,7 @@ export class Bicon extends LitElement {
     renderRoot = this;
 
     @property({ type: String })
-    icon?: 'delete' | 'edit' | 'add' | 'menu' | 'file' | 'edit-caption'| 'edit-text' | 'close' | 'save' | 'admin' | 'mobile' | 'desktop' | 'undo' | 'redo' | 'folder-tree' | 'meteor';
+    icon?: 'left' | 'right' | 'delete' | 'edit' | 'add' | 'menu' | 'file' | 'edit-caption'| 'edit-text' | 'close' | 'save' | 'admin' | 'mobile' | 'desktop' | 'undo' | 'redo' | 'folder-tree' | 'meteor' | 'shuffle';
 
     @property({ type: Boolean, attribute: 'file-input' })
     fileInput = false;
@@ -39,7 +39,10 @@ export class Bicon extends LitElement {
             case 'undo': return 'fa-solid fa-undo';
             case 'redo': return 'fa-solid fa-redo';
             case 'folder-tree': return 'fa-solid fa-folder-tree';
-            case 'meteor': return 'fa-solid fa-meteor'
+            case 'meteor': return 'fa-solid fa-meteor';
+            case 'shuffle': return 'fa-solid fa-shuffle';
+            case 'left': return 'fa-solid fa-arrow-left';
+            case 'right': return 'fa-solid fa-arrow-right';
             default: return '';
         }
     }
@@ -62,7 +65,7 @@ export class Bicon extends LitElement {
         if (fileInput)
             return html`
             <label class="icon ${this.disabled ? '' : 'cursor-pointer'}">
-                <span class="icon ${this.getIconClass()}">${this.getIconText()}</span>
+                <span class="icon-label ${this.getIconClass()}">${this.getIconText()}</span>
                 <input class="icon-input" type="file" accept=${accept} ?multiple=${multiple} @change=${fileChange}>
             </label>
             `

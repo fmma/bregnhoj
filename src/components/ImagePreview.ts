@@ -5,7 +5,6 @@ import { serverUrlPrefix } from "../constants";
 import './Icon';
 import type { Tile, Viewport } from "./Types";
 import { getHeight } from '../functions/getWidth';
-import disableScroll from 'disable-scroll'
 import { getText } from "./TextEditor";
 
 @customElement('b-image-preview')
@@ -26,22 +25,49 @@ export class BimagePreview extends LitElement {
     @state()
     hideCaption = false;
 
+    width = 0;
+    height = 0;
+
     update(changed: Map<keyof this, any>) {
         if(changed.has('tile')) {
             this.hideCaption = false;
             if(this.tile == null) {
-                disableScroll.off();
+                document.body.style.overflowY = "auto"
+                // disableScroll.off();
             }
             else {
-                disableScroll.on();
+
+                document.body.style.overflowY = "hidden"
+                // disableScroll.on();
+
+        const w = this.viewport.width;
+        const h = getHeight();
+        const fitSize = this.mobile ? 0.9 : 0.9;
+
+            if(this.tile.image?.ogw) {
+                const c = w / this.tile.image.ogw * fitSize;
+                this.width = c * this.tile.image.ogw;
+                this.height = c * this.tile.image.ogh
+            }
+            else {
+                const c1 = w / this.tile.rect.w;
+
+
+
+                const k1 = c1 * fitSize;
+                const k = k1;
+
+                this.width = k * this.tile.rect.w
+                this.height = k * this.tile.rect.h;
+            }
             }
         }
         super.update(changed);
     }
 
     clickPreview = () => {
-        if(this.mobile)
-            this.hideCaption = true;
+        //if(this.mobile)
+        //    this.hideCaption = true;
     }
 
     get caption(): string | undefined {
@@ -68,10 +94,14 @@ export class BimagePreview extends LitElement {
     clicked = (e: Event) => {
         const target = e.composedPath()[0] as HTMLElement;
         if (target.classList.contains('image-preview-wrapper') || target.tagName === 'IMG') {
-            if(this.editting)
-                this.textareaChange();
-            this.dispatchEvent(new CustomEvent('close-preview'));
+            this.closeAndSave();
         }
+    }
+
+    closeAndSave() {
+        if(this.editting)
+                this.textareaChange();
+        this.dispatchEvent(new CustomEvent('close-preview'));
     }
 
     render() {
@@ -79,48 +109,32 @@ export class BimagePreview extends LitElement {
             return nothing;
         }
 
-        const textarea = this.editting
-            ? html`
-                <b-text-editor .zIndex=${99999} .defaultColor=${"white"} .html=${this.caption} .newParent=${()=>
-                    this.querySelector('.image-preview-caption')}
-                    ></b-text-editor>
+        if(this.editting) {
+            return html`
+            <div class="image-preview-wrapper-editting" @click=${this.clicked}>
+                <div class="image-preview-caption-editting" @click=${this.clickPreview}>
+                    <b-text-editor .zIndex=${9999} .defaultColor=${"white"} .html=${this.caption} .newParent=${()=>
+                        this.querySelector('.image-preview-caption-editting')}
+                        ></b-text-editor>
+                </div>
+
+                <div class="image-preview-image">
+                    <img src="${this.tile.image?.isNew ? this.tile.image.bigurl.slice(4, -1) : `${serverUrlPrefix}${this.tile?.image?.bigurl ?? this.tile?.image?.url}`}"
+                       width="${this.width}px" height="${this.height}px" >
+                </div>
+            </div>
             `
-            : html`
+        }
+
+        const textarea = html`
                 <div class="text">
                     ${unsafeHTML(this.caption)}
                 </div>
             `;
 
-        const w = this.viewport.width;
-        const h = getHeight();
-        const fitSize = this.mobile ? 0.95 : 0.7;
-        let width, height;
-
-        if(this.tile.image.ogw) {
-            const c = Math.min(w / this.tile.image.ogw, h / this.tile.image.ogh) * fitSize;
-            width = c * this.tile.image.ogw;
-            height = c * this.tile.image.ogh
-        }
-        else {
-            const c1 = w / this.tile.rect.w;
-            const c2 = h / this.tile.rect.h;
-
-
-
-            const k1 = c1 * fitSize;
-            const k2 = c2 * fitSize;
-            const k = Math.min(k1, k2);
-
-            width = k * this.tile.rect.w
-            height = k * this.tile.rect.h;
-        }
 
         return html`
             <div class="image-preview-wrapper" @click=${this.clicked}>
-                <div class="image-preview-image">
-                    <img src="${this.tile.image?.isNew ? this.tile.image.bigurl.slice(4, -1) : `${serverUrlPrefix}${this.tile?.image?.bigurl ?? this.tile?.image?.url}`}"
-                        width="${width}" height="${height}">
-                </div>
                 ${
                     this.caption
                     ? html`
@@ -130,6 +144,10 @@ export class BimagePreview extends LitElement {
                     `
                     : nothing
                 }
+                <div class="image-preview-image">
+                    <img src="${this.tile.image?.isNew ? this.tile.image.bigurl.slice(4, -1) : `${serverUrlPrefix}${this.tile?.image?.bigurl ?? this.tile?.image?.url}`}"
+                       width="${this.width}px" height="${this.height}px" >
+                </div>
             </div>
         `
     }

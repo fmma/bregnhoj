@@ -1,6 +1,8 @@
 import { configure, db, media } from '@fmma-npm/http-client';
 import { html, LitElement, nothing, PropertyValueMap } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { overlaps } from '../functions/overlaps';
+import { defaultHeight, defaultHeightDouble, defaultHeightHalf, defaultWidth } from '../constants';
 import { getViewport } from '../functions/getWidth';
 import { isMobile } from '../functions/isMobile';
 import { urlify } from '../functions/urlify';
@@ -15,7 +17,10 @@ import type { Bpage } from './Page';
 import './SiteVersions';
 import './TextEditor';
 import './Tile';
-import type { Page, SiteDatabaseObject, SiteVersion, SubPage, Tile } from './Types';
+import type { Expanse, Page, Rect, SiteDatabaseObject, SiteVersion, SubPage, Tile } from './Types';
+import { readFile } from '../functions/readFile';
+import { snap } from '../functions/snap';
+import { shuffle } from '../functions/shuffle';
 
 
 configure({
@@ -251,6 +256,223 @@ export class Bapp extends LitElement {
 
     get canOpenSiteVersions() {
         return !this.canSave;
+    }
+
+
+    newTextBox = () => {
+        const e: Expanse = { w: defaultWidth, h: defaultHeight}
+
+        if( this._currentPage.sub != null) {
+            const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
+            const r: Rect = this.getRect(e, subPage.tiles);
+            const detail: Tile = { rect: r, textBlock: { text: '<h1>Overskrift</h1><p>Skriv tekst her</p>' } }
+            this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
+                detail: {
+                    ...subPage,
+                    tiles: [...subPage.tiles, detail]
+                }
+            });
+        }
+        else {
+            const page = this.pages[this._currentPage.page]
+            const r: Rect = this.getRect(e, page.tiles);
+            const detail: Tile = { rect: r, textBlock: { text: '<h1>Overskrift</h1><p>Skriv tekst her</p>' } }
+            this.updatePage(this._currentPage.page)({
+                detail: {
+                    ...page,
+                    tiles: [...page.tiles, detail]
+                }
+            })
+        }
+
+    }
+
+    getRect(e: Expanse, tiles: Tile[]): Rect {
+        const r = {...e, x: 0, y: 0};
+        let swazzle = true;
+        for(let y = 1;; y += defaultHeight + 1) {
+            swazzle = !swazzle;
+            if(swazzle) {
+                for(let x = 100 - e.w - 2; x >= 1 ; --x) {
+                    r.x = x;
+                    r.y = y;
+                    let o = false;
+                    for(const t of tiles) {
+                        if(overlaps(r, t.rect))
+                            o = true;
+                    }
+                    if(!o)
+                        return r;
+                    o = false;
+                    r.y += defaultHeightHalf + 1;
+                    for(const t of tiles) {
+                        if(overlaps(r, t.rect))
+                            o = true;
+                    }
+                    if(!o)
+                        return r;
+                }
+            }
+            else {
+                for(let x = 1; x < 100 - e.w - 1; ++x) {
+                    r.x = x;
+                    r.y = y;
+                    let o = false;
+                    for(const t of tiles) {
+                        if(overlaps(r, t.rect))
+                            o = true;
+                    }
+                    if(!o)
+                        return r;
+                    o = false;
+                    r.y += defaultHeightHalf + 1;
+                    for(const t of tiles) {
+                        if(overlaps(r, t.rect))
+                            o = true;
+                    }
+                    if(!o)
+                        return r;
+                }
+            }
+        }
+    }
+
+    shuffle = () => {
+        const newTiles: Tile[] = [];
+        if( this._currentPage.sub != null) {
+            const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
+            for(const tile of shuffle(subPage.tiles)) {
+                if(tile.image == null) {
+                    newTiles.push(tile);
+                    continue;
+                }
+                const { w, h} = tile.image;
+
+                let scale = defaultHeight/ h;
+                let e: Expanse = { w: snap(w * scale), h: snap(h * scale)}
+                if(e.w * e.h < defaultHeight * defaultHeight * 0.6) {
+                    let scale = defaultHeightDouble / h;
+                    e = { w: snap(w * scale), h: snap(h * scale)}
+                }
+                else if(e.w * e.h > defaultHeight * defaultHeight * 5) {
+                    let scale = defaultHeightHalf / h;
+                    e = { w: snap(w * scale), h: snap(h * scale)}
+                }
+
+                const rect: Rect = this.getRect(e, newTiles);
+                newTiles.push({
+                    ...tile,
+                    rect
+                });
+
+                this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
+                    detail: {...subPage, tiles: newTiles}
+                });
+            }
+        }
+        else {
+            const page = this.pages[this._currentPage.page]
+            for(const tile of shuffle(page.tiles)) {
+                if(tile.image == null) {
+                    newTiles.push(tile);
+                    continue;
+                }
+                const { w, h} = tile.image;
+
+                let scale = defaultHeight/ h;
+                let e: Expanse = { w: snap(w * scale), h: snap(h * scale)}
+                if(e.w * e.h < defaultHeight * defaultHeight * 0.6) {
+                    let scale = defaultHeightDouble / h;
+                    e = { w: snap(w * scale), h: snap(h * scale)}
+                }
+                else if(e.w * e.h > defaultHeight * defaultHeight * 5) {
+                    let scale = defaultHeightHalf / h;
+                    e = { w: snap(w * scale), h: snap(h * scale)}
+                }
+
+                const rect: Rect = this.getRect(e, newTiles);
+                newTiles.push({
+                    ...tile,
+                    rect
+                });
+
+                this.updatePage(this._currentPage.page)({
+                    detail: {...page, tiles: newTiles}
+                });
+            }
+        }
+
+    }
+
+    uploadImages = async (e: {detail: File[]}) => {
+
+        for(const f of e.detail) {
+            const { compressed, uncompressed, thumbnail, w, h, ogw, ogh } = await readFile(f);
+
+            let scale = defaultHeight/ h;
+            let e: Expanse = { w: snap(w * scale), h: snap(h * scale)}
+            if(e.w * e.h < defaultHeight * defaultHeight * 0.6) {
+                let scale = defaultHeightDouble / h;
+                e = { w: snap(w * scale), h: snap(h * scale)}
+            }
+            else if(e.w * e.h > defaultHeight * defaultHeight * 2) {
+                let scale = defaultHeightHalf / h;
+                e = { w: snap(w * scale), h: snap(h * scale)}
+            }
+
+            if( this._currentPage.sub != null) {
+                const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
+                const rect: Rect = this.getRect(e, subPage.tiles);
+
+                const detail: Tile = {
+                    rect,
+                    image: {
+                        isNew: true,
+                        url: `url(${thumbnail})`,
+                        bigurl: `url(${uncompressed})`,
+                        file: f,
+                        compressedFile: compressed,
+                        w,
+                        h,
+                        ogw,
+                        ogh
+                    }
+                };
+
+                this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
+                    detail: {
+                        ...subPage,
+                        tiles: [...subPage.tiles, detail]
+                    }
+                });
+            }
+            else {
+                const page = this.pages[this._currentPage.page]
+                const rect: Rect = this.getRect(e, page.tiles);
+
+                const detail: Tile = {
+                    rect,
+                    image: {
+                        isNew: true,
+                        url: `url(${thumbnail})`,
+                        bigurl: `url(${uncompressed})`,
+                        file: f,
+                        compressedFile: compressed,
+                        w,
+                        h,
+                        ogw,
+                        ogh
+                    }
+                };
+
+                this.updatePage(this._currentPage.page)({
+                    detail: {
+                        ...page,
+                        tiles: [...page.tiles, detail]
+                    }
+                })
+            }
+        }
     }
 
     openSiteVersions = () => {
@@ -525,7 +747,7 @@ export class Bapp extends LitElement {
             return this.editting
                 ? html`
                     <div class="buttons${mobile ? '-mobile' : ''}">
-                        <b-icon icon="folder-tree" @click=${this.openSiteVersions}></b-icon>
+                        <b-icon title="Filer" icon="folder-tree" @click=${this.openSiteVersions}></b-icon>
                     </div>
                 `
                 : nothing;
@@ -575,15 +797,25 @@ export class Bapp extends LitElement {
                     ? nothing
                     : this.editting
                         ? html`
-                            <b-icon title="filer" @click=${this.openSiteVersions} .disabled=${!this.canOpenSiteVersions} icon="folder-tree"></b-icon>
-                            <b-icon title="undo" @click=${this.undo} .disabled=${saving || !this.canUndo} icon="undo"></b-icon>
-                            <b-icon title="redo" @click=${this.redo} .disabled=${saving || !this.canRedo} icon="redo"></b-icon>
-                            <b-icon @click=${gem} .disabled=${saving || !this.canSave} icon="save"></b-icon>
-                            <b-icon @click=${this.stopEditting} icon="close"></b-icon>
+                            <b-icon title="Bland billeder" @click=${this.shuffle} icon="shuffle"></b-icon>
+                            <b-icon title="Ny tekstboks" @click=${this.newTextBox} icon="edit-text"></b-icon>
+                            <b-icon title="Upload billede(r)" @file-change=${this.uploadImages} icon="file" file-input multiple accept="image/jpeg, image/png, image/jpg"></b-icon>
+                            <b-icon title="Filer" @click=${this.openSiteVersions} .disabled=${!this.canOpenSiteVersions} icon="folder-tree"></b-icon>
+                            <b-icon title="Undo" @click=${this.undo} .disabled=${saving || !this.canUndo} icon="undo"></b-icon>
+                            <b-icon title="Redo" @click=${this.redo} .disabled=${saving || !this.canRedo} icon="redo"></b-icon>
+                            <b-icon title="Gem" @click=${gem} .disabled=${saving || !this.canSave} icon="save"></b-icon>
+                            <b-icon title="Kaser ændringer" @click=${this.stopEditting} icon="close"></b-icon>
                         `
-                        : html`<b-icon @click=${startEditting} icon="admin"></b-icon>`
+                        : html`<b-icon title="Rediger" @click=${startEditting} icon="admin"></b-icon>`
                 }
-                <b-icon @click=${this.toggleMobile} icon="${this.mobile ? 'desktop' : 'mobile'}"></b-icon>
+                ${this.mobile
+                    ? html`
+                        <b-icon title="Mobil" @click=${this.toggleMobile} icon="mobile"></b-icon>
+                    `
+                    : html`
+                        <b-icon title="Desktop" @click=${this.toggleMobile} icon="desktop"></b-icon>
+
+                    `}
             </div>
         `
     }

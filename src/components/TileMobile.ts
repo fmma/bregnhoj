@@ -46,13 +46,13 @@ export class BtileMobile extends LitElement {
         const w = this.width;
         const h = getHeight();
 
-        const k1 = w / tile.rect.w * 0.8;
-        const k2 = h / tile.rect.h * 0.8;
+        const k1 = w / tile.image?.ogw! * 0.8;
+        const k2 = h / tile.image?.ogh! * 0.8;
         const k = Math.min(k1, k2);
         const vw = k / w * 100;
 
-        const width = k * tile.rect.w;
-        const height = k * tile.rect.h;
+        const width = k * tile.image?.ogw!
+        const height = k * tile.image?.ogh!;
 
         const img = tile.image == null
             ? html`<div style="width:${width}px; height:${height}px"></div>`
