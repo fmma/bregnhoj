@@ -23,9 +23,9 @@ export class Boverview extends LitElement {
         const urls = [...new Set(urls0)];
 
         return html`<h1>Rediger undertekster</h1>
-        <ul>
+        <div style="display: flex;flex-wrap: wrap;">
             ${urls.map(u => this._renderImage(u))}
-        </ul>
+        </div>
         `;
     }
 
@@ -42,9 +42,9 @@ export class Boverview extends LitElement {
         const id = url.split('.')[0];
         const m = this.getMetadata(url);
         return html`
-            <li style="display:flex;margin:10px ">
+            <div style="display:flex;margin:10px ">
                 <span>
-                <img src="${serverUrlPrefix}${m.thumbUrl}" width=100 height=100/>
+                <img src="${serverUrlPrefix}${m.thumbUrl}" width=250 height=250 style = "object-fit: cover;"/>
                 </span>
                 <span>
                     <input id="titel-${id}" .value=${m.title ?? ''}
@@ -93,7 +93,7 @@ export class Boverview extends LitElement {
                     </textarea>
                     <label for="beskrivelse-${id}">Beskrivelse</label>
                 </span>
-            </li>
+            </div>
         `;
     }
 
