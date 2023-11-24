@@ -17,7 +17,7 @@ export class Boverview extends LitElement {
 
     render() {
         const urls0 = [
-            ...this.images.map(x => x.url),
+            ...this.images.map(x => x.bigurl),
             ...Object.keys(this.sdo?.imageMetadata ?? {})
         ];
         const urls = [...new Set(urls0)];
@@ -29,10 +29,12 @@ export class Boverview extends LitElement {
         `;
     }
 
-    getMetadata(url: string) {
+    getMetadata(url: string): ImageMetadata {
         const m = this.sdo?.imageMetadata?.[url];
-        if (m == null)
-            return { description: '', price: '', sizeH: '', sizeW: '', title: '' }
+        if (m == null) {
+            const i = this.images.find(x => x.bigurl === url);
+            return { description: '', price: '', sizeH: '', sizeW: '', title: '', thumbUrl: i?.url ?? '' }
+        }
         return { ...m };
     }
 
@@ -42,7 +44,7 @@ export class Boverview extends LitElement {
         return html`
             <li style="display:flex;margin:10px ">
                 <span>
-                <img src="${serverUrlPrefix}${url}" width=100 height=100/>
+                <img src="${serverUrlPrefix}${m.thumbUrl}" width=100 height=100/>
                 </span>
                 <span>
                     <input id="titel-${id}" .value=${m.title ?? ''}

@@ -89,7 +89,7 @@ export class BimagePreview extends LitElement {
             return nothing;
         }
 
-        const metadata = this.sdo?.imageMetadata?.[this.tile.image.url];
+        const metadata = this.sdo?.imageMetadata?.[this.tile.image.bigurl];
 
         const size = metadata?.sizeH && metadata.sizeW && html`<p> ${metadata?.sizeH} x ${metadata?.sizeW} </p>`;
 

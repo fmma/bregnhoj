@@ -13,6 +13,7 @@ export interface ImageMetadata {
     sizeW: string;
     sizeH: string;
     description: string;
+    thumbUrl: string;
 }
 
 export interface Image {
