@@ -1,4 +1,4 @@
-import { html, LitElement, nothing } from 'lit';
+import { html, LitElement } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import './NewTiles';
 import type { BnewTiles } from './NewTiles';
@@ -113,7 +113,7 @@ export class Bpage extends LitElement {
     };
 
     render() {
-        const { newTile, deleteTile, updateTile, updateRects, activateTile, activeTiles, tiles, page, mobile, editting } = this;
+        const { deleteTile, updateTile, updateRects, activateTile, activeTiles, tiles, page, mobile, editting } = this;
 
         return html`
             <h1 class="page-header">${page.title}</h1>

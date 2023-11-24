@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "snowpack dev",
+    "dev": "snowpack dev",
     "build": "tsc && snowpack build",
     "scp": "snowpack build && scp -r build/* frma@foadell:/home/frma/www_root/domains/snesl.dk/bregnhoj/",
     "scp-prod": "snowpack build && sed -i 's/bregnhoj\\///g' build\\index.html  && scp -r build/* frma@foadell:/home/frma/www_root/domains/bregnhoj.com/"

@@ -369,11 +369,6 @@ export class Btile extends LitElement {
         const buttons = !editingText
             ? html`
                 <b-icon icon="edit-text" @click=${edit(true)}></b-icon>
-                ${
-                    this.tile.image != null
-                    ? html`<b-icon icon="edit-caption" @click=${edit('caption')}></b-icon>`
-                    : nothing
-                }
             `
             : html`
                 <b-icon icon="save" @click=${edit(false)}></b-icon>

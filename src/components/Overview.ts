@@ -1,0 +1,101 @@
+import { LitElement, html } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import { serverUrlPrefix } from '../constants';
+import './NewTiles';
+import './Tile';
+import './TileMobile';
+import type { Image, ImageMetadata, SiteDatabaseObject } from './Types';
+
+@customElement('b-overview')
+export class Boverview extends LitElement {
+
+    @property({ type: Object })
+    sdo?: SiteDatabaseObject;
+
+    @property({ type: Object })
+    images: Image[] = [];
+
+    render() {
+        const urls0 = [
+            ...this.images.map(x => x.url),
+            ...Object.keys(this.sdo?.imageMetadata ?? {})
+        ];
+        const urls = [...new Set(urls0)];
+
+        return html`<h1>Rediger undertekster</h1>
+        <ul>
+            ${urls.map(u => this._renderImage(u))}
+        </ul>
+        `;
+    }
+
+    getMetadata(url: string) {
+        const m = this.sdo?.imageMetadata?.[url];
+        if (m == null)
+            return { description: '', price: '', sizeH: '', sizeW: '', title: '' }
+        return { ...m };
+    }
+
+    _renderImage(url: string) {
+        const id = url.split('.')[0];
+        const m = this.getMetadata(url);
+        return html`
+            <li style="display:flex;margin:10px ">
+                <span>
+                <img src="${serverUrlPrefix}${url}" width=100 height=100/>
+                </span>
+                <span>
+                    <input id="titel-${id}" .value=${m.title ?? ''}
+                    @change=${(e: InputEvent) => {
+                const v = (e.composedPath()[0] as HTMLInputElement).value;
+                const metadata = this.getMetadata(url);
+                metadata.title = v;
+                this.fireUpdateEvent(url, metadata);
+            }}>
+                    <label for="titel-${id}">Titel</label>
+                    
+                    <br>
+                    <input id="pris-${id}" .value=${m.price ?? ''}
+                    @change=${(e: InputEvent) => {
+                const v = (e.composedPath()[0] as HTMLInputElement).value;
+                const metadata = this.getMetadata(url);
+                metadata.price = v;
+                this.fireUpdateEvent(url, metadata);
+            }}>
+                    <label for="pris-${id}">Pris</label>
+
+                    <br>
+                    <input id="bredde-${id}" .value=${m.sizeW ?? ''}
+                    @change=${(e: InputEvent) => {
+                const v = (e.composedPath()[0] as HTMLInputElement).value;
+                const metadata = this.getMetadata(url);
+                metadata.sizeW = v;
+                this.fireUpdateEvent(url, metadata);
+            }}>x<input id="hojde-${id}" .value=${m.sizeH ?? ''}
+                    @change=${(e: InputEvent) => {
+                const v = (e.composedPath()[0] as HTMLInputElement).value;
+                const metadata = this.getMetadata(url);
+                metadata.sizeH = v;
+                this.fireUpdateEvent(url, metadata);
+            }}>
+                    <label for="hojde-${id}">Størrelse</label>
+
+                    <br>
+                    <textarea style="width: 343px; height: 164px;" id="beskrivelse-${id}" .value=${m.description ?? ''}
+                    @change=${(e: InputEvent) => {
+                const v = (e.composedPath()[0] as HTMLInputElement).value;
+                const metadata = this.getMetadata(url);
+                metadata.description = v;
+                this.fireUpdateEvent(url, metadata);
+            }}>
+                    </textarea>
+                    <label for="beskrivelse-${id}">Beskrivelse</label>
+                </span>
+            </li>
+        `;
+    }
+
+    private fireUpdateEvent(url: string, metadata: ImageMetadata) {
+        this.dispatchEvent(new CustomEvent('update-metadata', { detail: { url, metadata } }));
+    }
+}

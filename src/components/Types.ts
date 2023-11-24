@@ -7,6 +7,14 @@ export interface TextBlock {
     text: string;
 }
 
+export interface ImageMetadata {
+    title: string;
+    price: string;
+    sizeW: string;
+    sizeH: string;
+    description: string;
+}
+
 export interface Image {
     url: string;
     bigurl: string;
@@ -36,6 +44,7 @@ export interface SiteDatabaseObject {
     versions: SiteVersion[];
     publishedVersion: string;
     devVersion: string;
+    imageMetadata?: Record<string, ImageMetadata>
 }
 
 export interface Sites {
