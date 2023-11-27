@@ -91,7 +91,7 @@ export class BimagePreview extends LitElement {
 
         const metadata = this.sdo?.imageMetadata?.[this.tile.image.bigurl];
 
-        const size = metadata?.sizeH && metadata.sizeW && html`<p> ${metadata?.sizeH} x ${metadata?.sizeW} </p>`;
+        const size = metadata?.sizeH && metadata.sizeW && html`<p> ${metadata?.sizeW} x ${metadata?.sizeH} </p>`;
 
         const textarea = html`
             <div class="text">
@@ -101,6 +101,7 @@ export class BimagePreview extends LitElement {
             <div style="white-space: pre-wrap;">${metadata?.description}
 
 </div>
+            <button class="link-button" @click=${() => this.closeAndSave()}>Tilbage</button>
             </div>
         `;
 
