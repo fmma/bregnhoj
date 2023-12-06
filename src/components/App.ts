@@ -1,4 +1,5 @@
 import { configure, db, media } from '@fmma-npm/http-client';
+import { ObjPath } from '@fmma-npm/state';
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { defaultHeight, defaultHeightDouble, defaultHeightHalf, defaultWidth } from '../constants';
@@ -21,8 +22,8 @@ import type { Bpage } from './Page';
 import './SiteVersions';
 import './TextEditor';
 import './Tile';
-import type { Expanse, Page, Rect, SiteDatabaseObject, SiteVersion, SubPage, Tile, Image, ImageMetadata } from './Types';
-
+import type { Expanse, Image, Page, PageOrSubPage, Rect, SiteDatabaseObject, SiteVersion, SubPage, Tile } from './Types';
+import { State, stateM } from './stateM';
 
 configure({
     host: 'https://snesl.dk'
@@ -30,6 +31,13 @@ configure({
 
 @customElement('b-app')
 export class Bapp extends LitElement {
+
+    constructor() {
+        super();
+        stateM.observe(stateM.path(), () => {
+            return this._state = stateM.state;
+        });
+    }
 
     renderRoot = this;
 
@@ -73,12 +81,8 @@ export class Bapp extends LitElement {
     @state()
     mobile = isMobile();
 
-
     @state()
-    _undoBuffer: {pages: Page[], sdo: SiteDatabaseObject}[] = [];
-
-    @state()
-    _pageIndex = 0;
+    _state = stateM.state;
 
     @state()
     previewTileIndex?: { pageIndex: number, subPageIndex?: number, tileIndex: number };
@@ -97,7 +101,7 @@ export class Bapp extends LitElement {
                     ? sdo.devVersion
                     : sdo.publishedVersion
             ) ?? [{ title: 'Ny side', subPages: [], tiles: [] }];
-            this._undoBuffer = [{pages, sdo}];
+            stateM.reset({ pages, sdo });
         }
         this.trySetCurrentPage()
     }
@@ -135,47 +139,9 @@ export class Bapp extends LitElement {
         this.pages = e.detail;
     }
 
-    updateMetadata = (e: { detail: {url: string, metadata: ImageMetadata} }) => {
-        const sdo = this.sdo;
-        if(sdo == null)
-            throw new Error();
-        this.sdo = {... sdo, imageMetadata: {
-            ...sdo?.imageMetadata,
-            [e.detail.url]: e.detail.metadata
-        }}
-    }
-
-    updatePageOrSubPage = (e: { detail: SubPage & Page }) => {
-        const { page, sub } = this._currentPage;
-        if (sub == null) {
-            this.updatePage(page)(e);
-        }
-        else {
-            this.updateSubPage(page, sub)(e);
-        }
-    }
-
     openPreview = (e: { detail: { tileIndex: number } }) => {
         const { page, sub } = this._currentPage;
         this.previewTileIndex = { pageIndex: page, subPageIndex: sub, tileIndex: e.detail.tileIndex };
-    }
-
-    updatePreviewTile(e: { detail: Tile }) {
-        const tile = e.detail;
-        const ix = this.previewTileIndex
-        if (ix == null)
-            return undefined;
-
-        const { pageIndex: i, tileIndex: k, subPageIndex: j } = ix;
-
-        if (j == null) {
-            const page = this.pages[i];
-            this.updatePage(i)({ detail: { ...page, tiles: [...page.tiles.slice(0, k), tile, ...page.tiles.slice(k + 1)] } });
-        }
-        else {
-            const supPage = this.pages[i].subPages[j];
-            this.updateSubPage(i, j)({ detail: { ...supPage, tiles: [...supPage.tiles.slice(0, k), tile, ...supPage.tiles.slice(k + 1)] } });
-        }
     }
 
     updateSubPage = (i: number, j: number) => (e: { detail: SubPage }) => {
@@ -249,34 +215,26 @@ export class Bapp extends LitElement {
     }
 
     get pages() {
-        return this._undoBuffer[this._pageIndex].pages ?? [];
+        return this._state.pages;
     }
 
     set pages(pages: Page[]) {
-        this._undoBuffer = [
-            {pages, sdo: this.sdo},
-            ...this._undoBuffer.slice(this._pageIndex, 100)
-        ];
-        this._pageIndex = 0;
+        stateM.patch(stateM.path().at('pages').patch(pages));
     }
     get sdo() {
-        return this._undoBuffer[this._pageIndex].sdo ?? [];
+        return this._state.sdo;
     }
 
     set sdo(sdo: SiteDatabaseObject) {
-        this._undoBuffer = [
-            {pages: this.pages, sdo},
-            ...this._undoBuffer.slice(this._pageIndex, 100)
-        ];
-        this._pageIndex = 0;
+        stateM.patch(stateM.path().at('sdo').patch(sdo));
     }
 
     get canUndo() {
-        return this._pageIndex < this._undoBuffer.length - 1;
+        return stateM.canUndo;
     }
 
     get canRedo() {
-        return this._pageIndex > 0;
+        return stateM.canRedo
     }
 
     get canSave() {
@@ -514,13 +472,13 @@ export class Bapp extends LitElement {
 
     undo = () => {
         if (this.canUndo) {
-            this._pageIndex++;
+            stateM.undo();
         }
     }
 
     redo = () => {
         if (this.canRedo) {
-            this._pageIndex--;
+            stateM.redo();
         }
     }
 
@@ -528,13 +486,13 @@ export class Bapp extends LitElement {
         if (!this.sdo?.devVersion)
             this.openSiteVersions();
         this.editting = true;
-        this._undoBuffer = [];
+        stateM.reset();
         this.loadSite();
     }
 
     stopEditting = () => {
         this.editting = false;
-        this._undoBuffer = [];
+        stateM.reset();
         this.loadSite();
     }
 
@@ -754,7 +712,7 @@ export class Bapp extends LitElement {
     }
 
     render() {
-        const { updatePageOrSubPage, updatePages, updatePreviewTile, openPreview, pages, mobile } = this;
+        const { openPreview, pages, mobile } = this;
 
 
         if (this._isSiteVersionsOpened) {
@@ -790,21 +748,26 @@ export class Bapp extends LitElement {
             `
         }
 
+        let pagePath: ObjPath<State, PageOrSubPage> =
+            this._currentPage.sub
+                ? stateM.path().at('pages').ix(this._currentPage.page).at('subPages').ix(this._currentPage.sub)
+                : stateM.path().at('pages').ix(this._currentPage.page);
+
         return html`
-            <b-image-preview .sdo=${this.sdo} .tile=${this.previewTile} @update-preview-tile=${updatePreviewTile} @close-preview=${() => this.previewTileIndex = undefined} .editting=${this.editting} .mobile=${mobile} .viewport=${this._viewport}></b-image-preview>
+            <b-image-preview .sdo=${this.sdo} .tile=${this.previewTile} @close-preview=${() => this.previewTileIndex = undefined} .editting=${this.editting} .mobile=${mobile} .viewport=${this._viewport}></b-image-preview>
             <div class="outer">
                 <div class="pages">
                     ${mobile
                 ? html`<b-nav-mobile .pages=${pages} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav-mobile>`
                 : html`
-                            <b-nav .pages=${pages} @update-pages=${updatePages} .editting=${this.editting} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav>
+                            <b-nav .pages=${pages} .editting=${this.editting} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav>
                         `
             }
                     <div class="page-wrapper">
                         ${this._renderButtons()
             }
 
-                        <b-page .mobile=${mobile} .page=${page} @update-page=${updatePageOrSubPage} @open-preview=${openPreview} @b-set-loading=${this._setLoading} .editting=${this.editting} .viewport=${this._viewport}></b-page>
+                        <b-page .path=${pagePath} .mobile=${mobile} .page=${page} @open-preview=${openPreview} @b-set-loading=${this._setLoading} .editting=${this.editting} .viewport=${this._viewport}></b-page>
                     </div>
 
                     <div class="footer">
@@ -817,11 +780,11 @@ export class Bapp extends LitElement {
     }
 
     private _renderOverview() {
-        const { updateMetadata, editting } = this;
-        if(!editting)
+        const { editting } = this;
+        if (!editting)
             return nothing;
         return html`
-            <b-overview .sdo=${this.sdo} .images=${this.images} @update-metadata=${updateMetadata}></b-overview>
+            <b-overview .sdo=${this.sdo} .images=${this.images}></b-overview>
         `;
     }
 

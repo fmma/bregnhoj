@@ -5,6 +5,8 @@ import type { BnewTiles } from './NewTiles';
 import './Tile';
 import './TileMobile';
 import type { PageOrSubPage, Rect, Tile, Viewport } from './Types';
+import { ObjPath } from '@fmma-npm/state';
+import { State, stateM } from './stateM';
 
 @customElement('b-page')
 export class Bpage extends LitElement {
@@ -18,16 +20,13 @@ export class Bpage extends LitElement {
     page!: PageOrSubPage;
 
     @property({type: Object})
+    path?: ObjPath<State, PageOrSubPage>;
+
+    @property({type: Object})
     viewport: Viewport = {width: 0, pixelRatio: 1};
 
     get tiles() {
         return this.page.tiles;
-    }
-    set tiles(tiles: Tile[]) {
-        const { page } = this;
-        // tiles.sort((t1, t2) => posSortFun(t1.rect, t2.rect))
-        const detail: PageOrSubPage = {...page, tiles};
-        this.dispatchEvent(new CustomEvent('update-page', {detail}))
     }
 
     updated(props: Map<keyof this, any>) {
@@ -59,14 +58,19 @@ export class Bpage extends LitElement {
         const newIm = {
             ...e.detail
         };
-        this.tiles = [...this.tiles, newIm];
+        if(this.path == null)
+            return;
+        stateM.patch(this.path?.at('tiles').patch([...this.tiles, newIm]))
     }
 
     newTiles = (e: CustomEvent<Tile[]>) => {
         const newIm = e.detail.map(x => ({
             ...x
         }));
-        this.tiles = [...this.tiles, ...newIm];
+        
+        if(this.path == null)
+            return;
+        stateM.patch(this.path?.at('tiles').patch([...this.tiles, ...newIm]))
     }
 
     activateTile = (i: number) => (e: CustomEvent<boolean>) => {
@@ -82,13 +86,6 @@ export class Bpage extends LitElement {
             this.activeTiles = [i];
     }
 
-    updateTile = (i: number) => (e: CustomEvent<Tile>) => {
-        const { tiles, page } = this;
-        const newTiles = [...tiles.slice(0, i), e.detail, ...tiles.slice(i + 1)];
-        const newPage: PageOrSubPage = { ...page, tiles: newTiles };
-        this.dispatchEvent(new CustomEvent('update-page', {detail: newPage}))
-    }
-
     updateRects = (e: CustomEvent<{rect: Rect, index: number}[]>) => {
         const { detail } = e;
 
@@ -99,13 +96,15 @@ export class Bpage extends LitElement {
                 return tile;
             return {...tile, rect: update.rect};
         });
-        const newPage: PageOrSubPage = { ...page, tiles: newTiles };
-        this.dispatchEvent(new CustomEvent('update-page', {detail: newPage}));
+        if(this.path == null)
+            return;
+        stateM.patch(this.path.at('tiles').patch(newTiles))
     }
 
     deleteTile = () => {
-        this.tiles = this.tiles.filter((_, j) => !this.activeTiles.includes(j));
-        this.activeTiles = [];
+        if(this.path == null)
+            return;
+        stateM.patch(this.path?.at('tiles').patch(this.tiles.filter((_, j) => !this.activeTiles.includes(j))))
     }
 
     openPreview = (i: number) => () => {
@@ -113,7 +112,7 @@ export class Bpage extends LitElement {
     };
 
     render() {
-        const { deleteTile, updateTile, updateRects, activateTile, activeTiles, tiles, page, mobile, editting } = this;
+        const { deleteTile, updateRects, activateTile, activeTiles, tiles, page, mobile, editting } = this;
 
         return html`
             <h1 class="page-header">${page.title}</h1>
@@ -124,8 +123,8 @@ export class Bpage extends LitElement {
                 `
                 : html`
                 <b-tile .tile=${x} .active=${activeTiles.includes(i)} @activeMe=${activateTile(i)} .editting=${this.editting} .index=${i} .pixelRatio=${this.viewport.pixelRatio} .width=${this.viewport.width}
+                    .path=${this.path?.at('tiles').ix(i)}
                     @slet=${deleteTile}
-                    @update-tile=${updateTile(i)}
                     @update-rects=${updateRects}
                     @open-preview=${this.openPreview(i)}
                     ></b-tile>

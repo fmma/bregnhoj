@@ -7,6 +7,8 @@ import { snap } from '../functions/snap';
 import './Icon';
 import { getText } from './TextEditor';
 import type { Image, Pos, Rect, TextBlock, Tile } from './Types';
+import { State, stateM } from './stateM';
+import { ObjPath } from '@fmma-npm/state';
 
 // const activeTiles = new Set<Btile>();
 
@@ -28,6 +30,9 @@ export class Btile extends LitElement {
 
     @property({type: Number})
     index: number = 0;
+
+    @property({type: Object})
+    path?: ObjPath<State, Tile>;
 
     @property({type: Number})
     pixelRatio: number = 1;
@@ -55,8 +60,9 @@ export class Btile extends LitElement {
     set image(image: Image | undefined) {
         const { tile } = this;
         if(image) {
-            const newTile: Tile = { ...tile, image };
-            this.dispatchEvent(new CustomEvent('update-tile', {detail: newTile}))
+            if(this.path == null)
+                return;
+            stateM.patch(this.path.at('image').patch(image));
         }
     }
 
@@ -68,8 +74,9 @@ export class Btile extends LitElement {
     set textBlock(textBlock: TextBlock | undefined) {
         const { tile } = this;
         if(textBlock) {
-            const newTile: Tile = { ...tile, textBlock };
-            this.dispatchEvent(new CustomEvent('update-tile', {detail: newTile}))
+            if(this.path == null)
+                return;
+            stateM.patch(this.path.at('textBlock').patch(textBlock));
         }
     }
 

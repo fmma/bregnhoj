@@ -5,6 +5,7 @@ import './NewTiles';
 import './Tile';
 import './TileMobile';
 import type { Image, ImageMetadata, SiteDatabaseObject } from './Types';
+import { stateM } from './stateM';
 
 @customElement('b-overview')
 export class Boverview extends LitElement {
@@ -98,6 +99,10 @@ export class Boverview extends LitElement {
     }
 
     private fireUpdateEvent(url: string, metadata: ImageMetadata) {
-        this.dispatchEvent(new CustomEvent('update-metadata', { detail: { url, metadata } }));
+        
+        stateM.patch(stateM.path().at('sdo').at('imageMetadata').patch({
+            ...this.sdo?.imageMetadata,
+            [url]: metadata
+        }));
     }
 }

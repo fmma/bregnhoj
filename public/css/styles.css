@@ -43,7 +43,7 @@ progress {
 
 .buttons {
     position: fixed;
-    top: 65px;
+    top: 15px;
     right: 8px;
     z-index: 100;
     background: white;
