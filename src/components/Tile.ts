@@ -299,6 +299,11 @@ export class Btile extends LitElement {
         this.dispatchEvent(new CustomEvent("slet", {detail: this}));
     }
 
+    grow = () => {
+        this.dispatchEvent(new CustomEvent("grow", {detail: {tile: this, up: true, down: true, left: true, right: true}}));
+    }
+
+
     edit = (mode: boolean | 'caption') => (e?: MouseEvent) => {
         if(e) {
             this.activeMeMouseUp(e);
@@ -358,7 +363,7 @@ export class Btile extends LitElement {
     }
 
     render() {
-        const { isActive, modes, mousedown, slet, edit, textBlock, editingText, fileChange, tile } = this;
+        const { isActive, modes, mousedown, grow, slet, edit, textBlock, editingText, fileChange, tile } = this;
 
         const textarea = editingText
             ? html`
@@ -413,6 +418,7 @@ export class Btile extends LitElement {
                                     <b-icon file-input icon="file" @file-change=${fileChange} @click=${this.activeMeMouseUp}></b-icon>
                                     ${buttons}
                                     <b-icon icon="delete" @click=${slet}></b-icon>
+                                    <b-icon icon="grow" @click=${grow}></b-icon>
                                 </div>
                                 `
                             : nothing

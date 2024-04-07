@@ -7,7 +7,7 @@ export class Bicon extends LitElement {
     renderRoot = this;
 
     @property({ type: String })
-    icon?: 'left' | 'right' | 'delete' | 'edit' | 'add' | 'menu' | 'file' | 'edit-caption'| 'edit-text' | 'close' | 'save' | 'admin' | 'mobile' | 'desktop' | 'undo' | 'redo' | 'folder-tree' | 'meteor' | 'shuffle';
+    icon?: 'left' | 'right' | 'delete' | 'edit' | 'add' | 'menu' | 'file' | 'edit-caption'| 'edit-text' | 'close' | 'save' | 'admin' | 'mobile' | 'desktop' | 'undo' | 'redo' | 'folder-tree' | 'meteor' | 'shuffle' | 'grow';
 
     @property({ type: Boolean, attribute: 'file-input' })
     fileInput = false;
@@ -43,6 +43,7 @@ export class Bicon extends LitElement {
             case 'shuffle': return 'fa-solid fa-shuffle';
             case 'left': return 'fa-solid fa-arrow-left';
             case 'right': return 'fa-solid fa-arrow-right';
+            case 'grow': return 'fa-solid fa-arrows-up-down-left-right'
             default: return '';
         }
     }

@@ -7,6 +7,7 @@ import './TileMobile';
 import type { PageOrSubPage, Rect, Tile, Viewport } from './Types';
 import { ObjPath } from '@fmma-npm/state';
 import { State, stateM } from './stateM';
+import { overlaps } from '../functions/overlaps';
 
 @customElement('b-page')
 export class Bpage extends LitElement {
@@ -107,12 +108,62 @@ export class Bpage extends LitElement {
         stateM.patch(this.path?.at('tiles').patch(this.tiles.filter((_, j) => !this.activeTiles.includes(j))))
     }
 
+    growTile = (e: CustomEvent<{tile: {tile: Tile, index:number}, up: boolean, down: boolean, left: boolean, right: boolean}>) => {
+        if(this.path == null)
+            return;
+        const r = {...e.detail.tile.tile.rect};
+        const rs = this.tiles.filter((_,i) => i != e.detail.tile.index).map(x => x.rect);
+        console.log(r, rs.find(r0 => overlaps(r, r0)));
+
+        const maxY = 1 + Math.max(...rs.map(t => t.y + t.h));
+        const maxX = 100;
+
+        if(e.detail.left) {
+            while(r.x > 0 && rs.every(r0 => !overlaps(r, r0))) {
+                r.x--;
+                r.w++;
+                console.log('grow left', r);
+            }
+            r.x++;
+            r.w--;
+        }
+
+        if(e.detail.right) {
+            while(r.x + r.w < maxX && rs.every(r0 => !overlaps(r, r0))) {
+                r.w++;
+                console.log('grow right', r);
+            }
+            r.w--;
+        }
+
+        if(e.detail.up) {
+            while(r.y > 0 && rs.every(r0 => !overlaps(r, r0))) {
+                r.y--;
+                r.h++;
+                console.log('grow up', r);
+            }
+            r.y++;
+            r.h--;
+        }
+
+        if(e.detail.down) {
+            while(r.y + r.h < maxY && rs.every(r0 => !overlaps(r, r0))) {
+                r.h++;
+                console.log('grow down', r);
+            }
+            r.h--;
+        }
+
+
+        stateM.patch(this.path?.at('tiles').ix(e.detail.tile.index).patch({...e.detail.tile.tile, rect: r}));
+    }
+
     openPreview = (i: number) => () => {
         this.dispatchEvent(new CustomEvent('open-preview', { detail: { tileIndex: i } }));
     };
 
     render() {
-        const { deleteTile, updateRects, activateTile, activeTiles, tiles, page, mobile, editting } = this;
+        const { growTile, deleteTile, updateRects, activateTile, activeTiles, tiles, page, mobile, editting } = this;
 
         return html`
             <h1 class="page-header">${page.title}</h1>
@@ -125,6 +176,7 @@ export class Bpage extends LitElement {
                 <b-tile .tile=${x} .active=${activeTiles.includes(i)} @activeMe=${activateTile(i)} .editting=${this.editting} .index=${i} .pixelRatio=${this.viewport.pixelRatio} .width=${this.viewport.width}
                     .path=${this.path?.at('tiles').ix(i)}
                     @slet=${deleteTile}
+                    @grow=${growTile}
                     @update-rects=${updateRects}
                     @open-preview=${this.openPreview(i)}
                     ></b-tile>
