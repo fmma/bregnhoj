@@ -69,6 +69,6 @@ export class Bicon extends LitElement {
                 <input class="icon-input" type="file" accept=${accept} ?multiple=${multiple} @change=${fileChange}>
             </label>
             `
-        return html`<button ?disabled=${this.disabled} class="icon ${this.getIconClass()} ${this.disabled ? '' : 'cursor-pointer'}">${this.getIconText()}</button>`;
+        return html`<button ?disabled=${this.disabled} class="icon icon-label ${this.getIconClass()} ${this.disabled ? '' : 'cursor-pointer'}">${this.getIconText()}</button>`;
     }
 }

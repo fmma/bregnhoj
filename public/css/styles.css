@@ -43,7 +43,7 @@ progress {
 
 .buttons {
     position: fixed;
-    top: 15px;
+    top: 0px;
     right: 8px;
     z-index: 100;
     background: white;
@@ -60,10 +60,6 @@ progress {
 
 .buttons-mobile button {
     color: darkgreen;
-}
-
-.buttons button {
-    font-size: 30px;
 }
 
 .footer {
@@ -125,7 +121,7 @@ progress {
 }
 
 .icon-label {
-    font-size: 30px;
+    font-size: 50px;
 }
 
 .cursor-pointer {
@@ -541,6 +537,15 @@ progress {
 .mmenu-menu li {
     border: 1px solid grey;
     box-sizing: border-box;
+}
+
+.nav-edit-buttons {
+    position: absolute;
+    left:0px;
+    background-color: white;
+    border: 1px solid black;
+    display:flex;
+    flex-direction: column;
 }
 
 .mmenu-subnav-content {

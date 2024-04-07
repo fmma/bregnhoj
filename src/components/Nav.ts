@@ -150,17 +150,21 @@ export class Nav extends LitElement {
                                     @change=${updateTitle(i)} class="${this.editIsCurrent({ k: 'menu', i }) ? 'visible-input' : 'hidden'}"
                                     @blur=${this.blurInput({ k: 'menu', i })}
                                 >
-                                <div class="nav-edit-buttons">
-                                <b-icon title="Rediger" icon="edit"  @click=${() => this.toggleEdit({ k: 'menu', i })}></b-icon>
-                                <b-icon title="Slet" icon="delete" @click=${deletePage(i)}></b-icon>
-                                <b-icon title="Flyt til venstre" icon="left" @click=${moveLeft(i)}></b-icon>
-                                <b-icon title="Flyt til højre" icon="right" @click=${moveRight(i)}></b-icon>
-                                </div>
                             `
                             : nothing
                     }
                     <div class="submenu">
                         <ul>
+                            
+                            ${this.editting ? html`
+                                <li>
+                                    <b-icon title="Rediger" icon="edit"  @click=${() => this.toggleEdit({ k: 'menu', i })}></b-icon>
+                                    <b-icon title="Slet" icon="delete" @click=${deletePage(i)}></b-icon>
+                                    <b-icon title="Flyt til venstre" icon="left" @click=${moveLeft(i)}></b-icon>
+                                    <b-icon title="Flyt til højre" icon="right" @click=${moveRight(i)}></b-icon>
+                                    <b-icon title="Tilføj ny underside" icon="add" @click=${newSubPage(i)}></b-icon>
+                                </li>
+                            `: nothing}
                             ${page.subPages.map((subPage, j) => html`
                             <li>
                                 <a href="#${urlify(this.pages, page.title, subPage.title)}" @click=${navigate(i,j)}
@@ -175,6 +179,7 @@ export class Nav extends LitElement {
                                                 @change=${updateSubTitle(i, j)} class="${this.editIsCurrent({ k: 'submenu', i, j }) ? 'visible-input' : 'hidden'}"
                                                 @blur=${this.blurInput({ k: 'submenu', i, j })}
                                             >
+
                                             <b-icon title="Rediger" icon="edit" @click=${() => this.toggleEdit({ k: 'submenu', i, j })}></b-icon>
                                             <b-icon title="Slet" icon="delete" @click=${deleteSubPage(i, j)}></b-icon>
                                         `
@@ -182,11 +187,6 @@ export class Nav extends LitElement {
                                 }
                             </li>
                             `)}
-                            ${this.editting ? html`
-                                <li>
-                                    <b-icon title="Tilføj ny underside" icon="add" @click=${newSubPage(i)}></b-icon>
-                                </li>
-                            `: nothing}
                         </ul>
                     </div>
                 </li>
