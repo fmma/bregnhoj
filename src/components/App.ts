@@ -771,7 +771,7 @@ export class Bapp extends LitElement {
                     </div>
 
                     <div class="footer">
-                        <span>© 2023 www.bregnhoj.com</span>
+                        <hr>
                     </div>
                     ${this._renderOverview()}
                 </div>
