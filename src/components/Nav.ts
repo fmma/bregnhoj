@@ -194,7 +194,7 @@ export class Nav extends LitElement {
                 ${
                     this.editting
                         ? html`
-                        <li>
+                        <li class="new-page-button">
                             <b-icon title="Tilføj ny side" icon="add" @click=${newPage}></b-icon>
                         </li>
                         `

@@ -193,6 +193,12 @@ progress {
     text-align: center;
 }
 
+.new-page-button {
+    position: absolute !important;
+    background: white;
+    border: 1px solid black;
+}
+
 .menu li {
     position: relative;
     display: inline-block;
@@ -292,6 +298,9 @@ progress {
     overflow-y: auto;
 }
 
+.visible-input {
+    font-size: 30px;
+}
 
 .image-preview-wrapper .icon {
     color: #43bab8;
