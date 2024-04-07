@@ -113,7 +113,6 @@ export class Bpage extends LitElement {
             return;
         const r = {...e.detail.tile.tile.rect};
         const rs = this.tiles.filter((_,i) => i != e.detail.tile.index).map(x => x.rect);
-        console.log(r, rs.find(r0 => overlaps(r, r0)));
 
         const maxY = 1 + Math.max(...rs.map(t => t.y + t.h));
         const maxX = 100;
@@ -122,7 +121,7 @@ export class Bpage extends LitElement {
             while(r.x > 0 && rs.every(r0 => !overlaps(r, r0))) {
                 r.x--;
                 r.w++;
-                console.log('grow left', r);
+                // console.log('grow left', r);
             }
             r.x++;
             r.w--;
@@ -131,7 +130,7 @@ export class Bpage extends LitElement {
         if(e.detail.right) {
             while(r.x + r.w < maxX && rs.every(r0 => !overlaps(r, r0))) {
                 r.w++;
-                console.log('grow right', r);
+                // console.log('grow right', r);
             }
             r.w--;
         }
@@ -140,7 +139,7 @@ export class Bpage extends LitElement {
             while(r.y > 0 && rs.every(r0 => !overlaps(r, r0))) {
                 r.y--;
                 r.h++;
-                console.log('grow up', r);
+                // console.log('grow up', r);
             }
             r.y++;
             r.h--;
@@ -149,7 +148,7 @@ export class Bpage extends LitElement {
         if(e.detail.down) {
             while(r.y + r.h < maxY && rs.every(r0 => !overlaps(r, r0))) {
                 r.h++;
-                console.log('grow down', r);
+                // console.log('grow down', r);
             }
             r.h--;
         }
