@@ -749,7 +749,7 @@ export class Bapp extends LitElement {
         }
 
         let pagePath: ObjPath<State, PageOrSubPage> =
-            this._currentPage.sub
+            this._currentPage.sub != null
                 ? stateM.path().at('pages').ix(this._currentPage.page).at('subPages').ix(this._currentPage.sub)
                 : stateM.path().at('pages').ix(this._currentPage.page);
 
