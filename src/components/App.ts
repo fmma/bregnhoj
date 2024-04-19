@@ -103,7 +103,9 @@ export class Bapp extends LitElement {
             ) ?? [{ title: 'Ny side', subPages: [], tiles: [] }];
             stateM.reset({ pages, sdo });
         }
-        this.trySetCurrentPage()
+        setTimeout(() => 
+            this.trySetCurrentPage()
+        );
     }
 
     get tiles() {
@@ -116,6 +118,7 @@ export class Bapp extends LitElement {
 
     trySetCurrentPage() {
         const hash = window.location.hash.slice(1);
+
         for (const [i, page] of this.pages.entries()) {
             if (hash == urlify(this.pages, page.title)) {
                 this._currentPage = { page: i }
@@ -482,18 +485,18 @@ export class Bapp extends LitElement {
         }
     }
 
-    startEditting = () => {
+    startEditting = async () => {
         if (!this.sdo?.devVersion)
             this.openSiteVersions();
         this.editting = true;
         stateM.reset();
-        this.loadSite();
+        await this.loadSite();
     }
 
-    stopEditting = () => {
+    stopEditting = async () => {
         this.editting = false;
         stateM.reset();
-        this.loadSite();
+        await this.loadSite();
     }
 
     toggleMobile = () => {
@@ -511,7 +514,7 @@ export class Bapp extends LitElement {
 
         this.saving = true;
         const { pages } = this;
-        for (const p of pages) {
+        for (const p of pages.flatMap(p => [p, ...p.subPages ?? []])) {
             for (const t of p.tiles) {
                 if (t.image?.isNew) {
                     if (t.image.file == null || t.image.compressedFile == null)
@@ -543,7 +546,25 @@ export class Bapp extends LitElement {
                         ogh: x.image.ogh
                     }
                 };
-            })
+            }),
+            subPages: page.subPages.map(subPage => ({
+                ...subPage,
+                tiles: subPage.tiles.map((x): Tile => {
+                    return {
+                        rect: x.rect,
+                        textBlock: x.textBlock,
+                        image: x.image == null ? undefined : {
+                            bigurl: x.image.bigurl,
+                            url: x.image.url,
+                            caption: x.image.caption,
+                            w: x.image.w,
+                            h: x.image.h,
+                            ogw: x.image.ogw,
+                            ogh: x.image.ogh
+                        }
+                    };
+                })
+            }))
         }));
 
         const obj = await this.getSiteObject();
@@ -729,8 +750,8 @@ export class Bapp extends LitElement {
             `;
         }
 
-        const page = this._currentPage.sub != null
-            ? this.pages[this._currentPage.page].subPages[this._currentPage.sub]
+        const page = this._currentPage?.sub != null
+            ? this.pages[this._currentPage.page]?.subPages[this._currentPage.sub]
             : this.pages[this._currentPage.page];
 
         if (page == null)
