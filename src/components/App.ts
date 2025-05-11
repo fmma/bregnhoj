@@ -221,6 +221,10 @@ export class Bapp extends LitElement {
         return this._state.pages;
     }
 
+    get soMeLinks() {
+        return this._state.sdo.soMeLinks ?? [];
+    }
+
     set pages(pages: Page[]) {
         stateM.patch(stateM.path().at('pages').patch(pages));
     }
@@ -733,7 +737,7 @@ export class Bapp extends LitElement {
     }
 
     render() {
-        const { openPreview, pages, mobile } = this;
+        const { openPreview, pages, mobile, soMeLinks } = this;
 
 
         if (this._isSiteVersionsOpened) {
@@ -779,9 +783,9 @@ export class Bapp extends LitElement {
             <div class="outer">
                 <div class="pages">
                     ${mobile
-                ? html`<b-nav-mobile .pages=${pages} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav-mobile>`
+                ? html`<b-nav-mobile .pages=${pages} .soMeLinks=${soMeLinks} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav-mobile>`
                 : html`
-                            <b-nav .pages=${pages} .editting=${this.editting} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav>
+                            <b-nav .pages=${pages}  .soMeLinks=${soMeLinks} .editting=${this.editting} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav>
                         `
             }
                     <div class="page-wrapper">

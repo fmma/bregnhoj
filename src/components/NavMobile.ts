@@ -1,7 +1,8 @@
 import { css, html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { urlify } from "../functions/urlify";
-import type { Page, SubPage } from "./Types";
+import { Page, SoMeLink, SubPage } from "./Types";
+import { renderSoMeIcon } from "../functions/renderSoMeIcon";
 
 let counter = 0;
 
@@ -22,6 +23,9 @@ export class BnavMobile extends LitElement {
 
     @property({ type: Array })
     pages!: Page[];
+    
+    @property({type: Array})
+    soMeLinks!: SoMeLink[]
 
     closeMenu = () => {
         const checkbox = this.querySelector('#mmenu-side-menu' + this._id) as HTMLInputElement;
@@ -61,6 +65,10 @@ export class BnavMobile extends LitElement {
                 <nav class="mmenu-nav">
                     <ul class="mmenu-menu">
                         ${pages.map(renderMenuItem)}
+                        
+                        ${this.soMeLinks.map(soMeLink => html`
+                                <li>${renderSoMeIcon(soMeLink)}</li>
+                            `)}
                     </ul>
                 </nav>
             </header>
