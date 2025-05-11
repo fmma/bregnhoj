@@ -65,7 +65,7 @@ export type SoMeName = (typeof socialMediaNames)[number];
 
 export interface SoMeLink {
     name: SoMeName
-    url: string
+    user: string
 }
 
 export interface Sites {
