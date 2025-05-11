@@ -7,9 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "snowpack dev",
     "build": "tsc && snowpack build",
-    "scp": "snowpack build && scp -r build/* frma@foadell:/home/frma/www_root/domains/snesl.dk/bregnhoj/",
-    "release-bregnhoj": "tsc && snowpack build && sed -i 's/bregnhoj\\///g' build\\index.html  && scp -r build/* frma@foadell:/home/frma/www_root/domains/bregnhoj.com/",
-    "release-meisnermadsen": "tsc && snowpack build && sed -i 's/bregnhoj\\///g' build\\lisogkarsten.html && scp -r build/* frma@foadell:/home/frma/www_root/domains/meisnermadsen.dk/ && scp build/lisogkarsten.html frma@foadell:/home/frma/www_root/domains/meisnermadsen.dk/index.html"
+    "scp": "snowpack build && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/snesl.dk/bregnhoj/",
+    "release-bregnhoj": "snowpack build && sed -i 's/bregnhoj\\///g' build\\index.html  && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/bregnhoj.com/",
+    "release-meisnermadsen": "snowpack build && sed -i 's/bregnhoj\\///g' build\\lisogkarsten.html && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/meisnermadsen.dk/ && scp build/lisogkarsten.html fmadsen@foadell:/home/fmadsen/www_root/domains/meisnermadsen.dk/index.html"
   },
   "author": "",
   "license": "ISC",

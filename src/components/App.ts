@@ -518,42 +518,27 @@ export class Bapp extends LitElement {
 
         this.saving = true;
         const { pages } = this;
-        for (const p of pages.flatMap(p => [p, ...p.subPages ?? []])) {
-            for (const t of p.tiles) {
-                if (t.image?.isNew) {
-                    if (t.image.file == null || t.image.compressedFile == null)
-                        continue;
-                    const [bigurl, url] = await Promise.all([
-                        await saveFile(t.image.file, t.image.file.name),
-                        await saveFile(t.image.compressedFile as File, t.image.file.name)
-                    ]);
-                    t.image.bigurl = bigurl;
-                    t.image.url = url;
-                    t.image.isNew = false;
-                }
 
-            }
-        }
-        const dbValue = pages.map(page => ({
-            ...page,
-            tiles: page.tiles.map((x): Tile => {
-                return {
-                    rect: x.rect,
-                    textBlock: x.textBlock,
-                    image: x.image == null ? undefined : {
-                        bigurl: x.image.bigurl,
-                        url: x.image.url,
-                        caption: x.image.caption,
-                        w: x.image.w,
-                        h: x.image.h,
-                        ogw: x.image.ogw,
-                        ogh: x.image.ogh
+        const saveInternal = async () => {
+            for (const p of pages.flatMap(p => [p, ...p.subPages ?? []])) {
+                for (const t of p.tiles) {
+                    if (t.image?.isNew) {
+                        if (t.image.file == null || t.image.compressedFile == null)
+                            continue;
+                        const [bigurl, url] = await Promise.all([
+                            await saveFile(t.image.file, t.image.file.name),
+                            await saveFile(t.image.compressedFile as File, t.image.file.name)
+                        ]);
+                        t.image.bigurl = bigurl;
+                        t.image.url = url;
+                        t.image.isNew = false;
                     }
-                };
-            }),
-            subPages: page.subPages.map(subPage => ({
-                ...subPage,
-                tiles: subPage.tiles.map((x): Tile => {
+    
+                }
+            }
+            const dbValue = pages.map(page => ({
+                ...page,
+                tiles: page.tiles.map((x): Tile => {
                     return {
                         rect: x.rect,
                         textBlock: x.textBlock,
@@ -567,22 +552,50 @@ export class Bapp extends LitElement {
                             ogh: x.image.ogh
                         }
                     };
-                })
-            }))
-        }));
-
-        const obj = await this.getSiteObject();
-        const version = obj?.versions.find(x => x.name === this.sdo?.devVersion)
-        if (obj == null || version == null) {
-            return;
+                }),
+                subPages: page.subPages.map(subPage => ({
+                    ...subPage,
+                    tiles: subPage.tiles.map((x): Tile => {
+                        return {
+                            rect: x.rect,
+                            textBlock: x.textBlock,
+                            image: x.image == null ? undefined : {
+                                bigurl: x.image.bigurl,
+                                url: x.image.url,
+                                caption: x.image.caption,
+                                w: x.image.w,
+                                h: x.image.h,
+                                ogw: x.image.ogw,
+                                ogh: x.image.ogh
+                            }
+                        };
+                    })
+                }))
+            }));
+    
+            const obj = await this.getSiteObject();
+            const version = obj?.versions.find(x => x.name === this.sdo?.devVersion)
+            if (obj == null || version == null) {
+                return;
+            }
+            version.modified = new Date();
+            obj.imageMetadata = this.sdo.imageMetadata;
+            await this.putPages(this.sdo?.devVersion, dbValue);
+            await this.putSiteObject(obj);
+    
+            this.saving = false;
+            this.stopEditting();
         }
-        version.modified = new Date();
-        obj.imageMetadata = this.sdo.imageMetadata;
-        await this.putPages(this.sdo?.devVersion, dbValue);
-        await this.putSiteObject(obj);
 
-        this.saving = false;
-        this.stopEditting();
+        
+        try {
+            await saveInternal();
+        }
+        catch(err) {
+            
+            this.saving = false;
+            alert("Noget gik galt! Det er nok en god ide at reloade siden. Beklager.");
+        }
     }
 
     getPages(name: string) {
