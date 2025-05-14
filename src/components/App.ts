@@ -19,7 +19,7 @@ import './NewTiles';
 import './Overview';
 import './Page';
 import type { Bpage } from './Page';
-import './SiteVersions';
+import './Settings';
 import './TextEditor';
 import './Tile';
 import type { Expanse, Image, Page, PageOrSubPage, Rect, SiteDatabaseObject, SiteVersion, SubPage, Tile } from './Types';
@@ -88,7 +88,7 @@ export class Bapp extends LitElement {
     previewTileIndex?: { pageIndex: number, subPageIndex?: number, tileIndex: number };
 
     @state()
-    _isSiteVersionsOpened = false;
+    _isSettingsOpened = false;
 
     async loadSite() {
         const sdo = await this.getSiteObject()
@@ -248,7 +248,7 @@ export class Bapp extends LitElement {
         return this.canUndo;
     }
 
-    get canOpenSiteVersions() {
+    get canOpenSettings() {
         return !this.canSave;
     }
 
@@ -469,12 +469,12 @@ export class Bapp extends LitElement {
         }
     }
 
-    openSiteVersions = () => {
-        this._isSiteVersionsOpened = true;
+    openSettings = () => {
+        this._isSettingsOpened = true;
     }
 
-    closeSiteVersions = () => {
-        this._isSiteVersionsOpened = false;
+    closeSettings = () => {
+        this._isSettingsOpened = false;
     }
 
     undo = () => {
@@ -491,7 +491,7 @@ export class Bapp extends LitElement {
 
     startEditting = async () => {
         if (!this.sdo?.devVersion)
-            this.openSiteVersions();
+            this.openSettings();
         this.editting = true;
         stateM.reset();
         await this.loadSite();
@@ -580,6 +580,7 @@ export class Bapp extends LitElement {
             }
             version.modified = new Date();
             obj.imageMetadata = this.sdo.imageMetadata;
+            obj.soMeLinks = this.sdo.soMeLinks;
             await this.putPages(this.sdo?.devVersion, dbValue);
             await this.putSiteObject(obj);
     
@@ -702,7 +703,7 @@ export class Bapp extends LitElement {
 
             await this.putSiteObject(obj);
             await this.loadSite();
-            this.closeSiteVersions();
+            this.closeSettings();
         },
 
         delete: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
@@ -753,17 +754,13 @@ export class Bapp extends LitElement {
         const { openPreview, pages, mobile, soMeLinks } = this;
 
 
-        if (this._isSiteVersionsOpened) {
+        if (this._isSettingsOpened) {
             return html`
-                <b-site-versions
-                    @change-site-name=${this.siteVersionsEventHandlers.change}
-                    @duplicate-site-version=${this.siteVersionsEventHandlers.duplicate}
-                    @open-site-version=${this.siteVersionsEventHandlers.open}
-                    @delete-site-version=${this.siteVersionsEventHandlers.delete}
-                    @publish-site-version=${this.siteVersionsEventHandlers.publish}
+                <b-settings
                     @rename-site=${this.siteVersionsEventHandlers.renameSite}
                     .siteDabaseObject=${this.sdo}
-                ></b-site-versions>
+                ></b-settings>
+                <button @click=${() => this.closeSettings()}> Luk indstillinger </button>
             `;
         }
 
@@ -775,7 +772,7 @@ export class Bapp extends LitElement {
             return this.editting
                 ? html`
                     <div class="buttons${mobile ? '-mobile' : ''}">
-                        <b-icon title="Filer" icon="folder-tree" @click=${this.openSiteVersions}></b-icon>
+                        <b-icon title="Rå" icon="code" @click=${this.openSettings}></b-icon>
                     </div>
                 `
                 : nothing;
@@ -842,7 +839,7 @@ export class Bapp extends LitElement {
                             <b-icon title="Bland billeder" @click=${this.shuffle} icon="shuffle"></b-icon>
                             <b-icon title="Ny tekstboks" @click=${this.newTextBox} icon="edit-text"></b-icon>
                             <b-icon title="Upload billede(r)" @file-change=${this.uploadImages} icon="file" file-input multiple accept="image/jpeg, image/png, image/jpg"></b-icon>
-                            <b-icon title="Filer" @click=${this.openSiteVersions} .disabled=${!this.canOpenSiteVersions} icon="folder-tree"></b-icon>
+                            <b-icon title="Indstillinger" @click=${this.openSettings} .disabled=${!this.canOpenSettings} icon="code"></b-icon>
                             <b-icon title="Undo" @click=${this.undo} .disabled=${saving || !this.canUndo} icon="undo"></b-icon>
                             <b-icon title="Redo" @click=${this.redo} .disabled=${saving || !this.canRedo} icon="redo"></b-icon>
                             <b-icon title="Gem" @click=${gem} .disabled=${saving || !this.canSave} icon="save"></b-icon>

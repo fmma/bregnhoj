@@ -204,7 +204,7 @@ export class Nav extends LitElement {
                         `
                         : nothing
                 }
-                ${this.soMeLinks.map(soMeLink => html`
+                ${this.soMeLinks.map(soMeLink => soMeLink.user && html`
                         <li>${renderSoMeIcon(soMeLink)}</li>
                     `)}
             </ul>

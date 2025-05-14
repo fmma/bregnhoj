@@ -61,14 +61,13 @@ export class BnavMobile extends LitElement {
             <header class="mmenu-header">
                 <a href="" class="mmenu-logo">${this.siteTitle}</a>
                 <input class="mmenu-side-menu" type="checkbox" id="mmenu-side-menu${this._id}" />
+                ${this.soMeLinks.map(soMeLink => soMeLink.user && html`
+                        ${renderSoMeIcon(soMeLink)}
+                `)}
                 <label class="mmenu-hamb" for="mmenu-side-menu${this._id}"><span class="mmenu-hamb-line"></span></label>
                 <nav class="mmenu-nav">
                     <ul class="mmenu-menu">
                         ${pages.map(renderMenuItem)}
-                        
-                        ${this.soMeLinks.map(soMeLink => html`
-                                <li>${renderSoMeIcon(soMeLink)}</li>
-                            `)}
                     </ul>
                 </nav>
             </header>
