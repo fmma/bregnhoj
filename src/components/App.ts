@@ -2,7 +2,7 @@ import { configure, db, media } from '@fmma-npm/http-client';
 import { ObjPath } from '@fmma-npm/state';
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { defaultHeight, defaultHeightDouble, defaultHeightHalf, defaultWidth } from '../constants';
+import { defaultHeight, defaultHeightDouble, defaultHeightHalf, defaultWidth, grid, margin } from '../constants';
 import { getViewport } from '../functions/getWidth';
 import { isMobile } from '../functions/isMobile';
 import { overlaps } from '../functions/overlaps';
@@ -287,7 +287,7 @@ export class Bapp extends LitElement {
         for (let y = 1; ; y += defaultHeight + 1) {
             swazzle = !swazzle;
             if (swazzle) {
-                for (let x = 100 - e.w - 2; x >= 1; --x) {
+                for (let x = 100 - e.w - 2 - margin; x >= 1 + margin; --x) {
                     r.x = x;
                     r.y = y;
                     let o = false;
@@ -308,7 +308,7 @@ export class Bapp extends LitElement {
                 }
             }
             else {
-                for (let x = 1; x < 100 - e.w - 1; ++x) {
+                for (let x = 1 + margin; x < 100 - e.w - 1 - margin; ++x) {
                     r.x = x;
                     r.y = y;
                     let o = false;
@@ -332,70 +332,158 @@ export class Bapp extends LitElement {
     }
 
     shuffle = () => {
+
+        let { newTiles, badness } = this.shuffleIteration();
+        for(let i = 0; i < 20; ++i) {
+            const r = this.shuffleIteration();
+            if(r.badness < badness) {
+                newTiles = r.newTiles;
+                badness = r.badness;
+            }
+        }
+
+        
+        if (this._currentPage.sub != null) {
+            const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
+            this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
+                detail: { ...subPage, tiles: newTiles }
+            });
+        }
+        else {
+            const page = this.pages[this._currentPage.page]
+            this.updatePage(this._currentPage.page)({
+                detail: { ...page, tiles: newTiles }
+            });
+        }
+    }
+
+    shuffleIteration = () => {
         const newTiles: Tile[] = [];
+        const placeTile = (tile: Tile) => {
+            if (tile.image == null) {
+                newTiles.push(tile);
+                return;
+            }
+            const { w, h } = tile.image;
+
+            const magicNumber = Math.random() < 0.2 ? 2 : 1;
+            let scale = magicNumber * defaultHeight / h;
+            let e: Expanse = { w: snap(w * scale), h: snap(h * scale) }
+            if (e.w * e.h < defaultHeight * defaultHeight * 0.6) {
+                let scale = defaultHeightDouble / h;
+                e = { w: snap(w * scale), h: snap(h * scale) }
+            }
+            else if (e.w * e.h > defaultHeight * defaultHeight * 5) {
+                let scale = defaultHeightHalf / h;
+                e = { w: snap(w * scale), h: snap(h * scale) }
+            }
+
+            const rect: Rect = this.getRect(e, newTiles);
+            newTiles.push({
+                ...tile,
+                rect
+            });
+        }
+        const isFreeRect= (r: Rect, exempt?: Tile) => {
+            const hasOverlap = newTiles.filter(t0 => t0 !== exempt).some(t0 => overlaps(r, t0.rect));
+            return !hasOverlap;
+        }
+        const getMaxH = () => newTiles.map((t) => Math.max(t.rect.y + t.rect.h)).reduce((a, b) => Math.max(a,b));
+        const findInnerTile = () => {
+            const maxH = getMaxH();
+
+            for(let x = margin; x < 100 - 2 - margin; ++x) {
+                for(let y = 1; y < maxH; ++y) {
+                    const r = {x, y, w: 3, h: 3};
+                    if(isFreeRect(r)) {
+                        exandTileInPlace(r)
+                        return r;
+                    }
+                }
+            }
+        }
+        const exandTileInPlace = (r: Rect, t?: Tile) => {        
+            const maxH = getMaxH();    
+            while(r.x > 1 + margin) {
+                r.x -= 1;
+                r.w += 1;
+                if(isFreeRect(r, t)) {
+                    //ok
+                }
+                else {
+                    r.x += 1;
+                    r.w -= 1;
+                    break;
+                }
+            }
+            
+            while(r.x + r.w < 100 - 2 - margin) {
+                r.w += 1;
+                if(isFreeRect(r, t)) {
+                    //ok
+                }
+                else {
+                    r.w -= 1;
+                    break;
+                }
+            }
+            
+            while(r.y + r.h < maxH) {
+                r.h += 1;
+                if(isFreeRect(r, t)) {
+                    //ok
+                }
+                else {
+                    r.h -= 1;
+                    break;
+                }
+            }
+        }
+        const expando = () => {
+            for(const t of newTiles) {
+                exandTileInPlace(t.rect, t);
+            }
+        }
+        const badness = () => {
+            let badness = 0;
+            for(const t of newTiles) {
+                if(t.image) {
+                    const actualArea = t.rect.w * t.rect.h;
+                    const actualRatio = t.rect.w / t.rect.h;
+                    const optimalRatio = t.image.w / t.image.h;
+                    let b = actualRatio - optimalRatio;
+                    b = b * b;
+                    badness = Math.max(badness, b) + actualArea / 1000;
+                }
+            }
+            return badness;
+        }
         if (this._currentPage.sub != null) {
             const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
             for (const tile of shuffle(subPage.tiles)) {
-                if (tile.image == null) {
-                    newTiles.push(tile);
-                    continue;
-                }
-                const { w, h } = tile.image;
-
-                let scale = defaultHeight / h;
-                let e: Expanse = { w: snap(w * scale), h: snap(h * scale) }
-                if (e.w * e.h < defaultHeight * defaultHeight * 0.6) {
-                    let scale = defaultHeightDouble / h;
-                    e = { w: snap(w * scale), h: snap(h * scale) }
-                }
-                else if (e.w * e.h > defaultHeight * defaultHeight * 5) {
-                    let scale = defaultHeightHalf / h;
-                    e = { w: snap(w * scale), h: snap(h * scale) }
-                }
-
-                const rect: Rect = this.getRect(e, newTiles);
-                newTiles.push({
-                    ...tile,
-                    rect
-                });
-
-                this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
-                    detail: { ...subPage, tiles: newTiles }
-                });
+                placeTile(tile);
             }
         }
         else {
             const page = this.pages[this._currentPage.page]
             for (const tile of shuffle(page.tiles)) {
-                if (tile.image == null) {
-                    newTiles.push(tile);
-                    continue;
-                }
-                const { w, h } = tile.image;
-
-                let scale = defaultHeight / h;
-                let e: Expanse = { w: snap(w * scale), h: snap(h * scale) }
-                if (e.w * e.h < defaultHeight * defaultHeight * 0.6) {
-                    let scale = defaultHeightDouble / h;
-                    e = { w: snap(w * scale), h: snap(h * scale) }
-                }
-                else if (e.w * e.h > defaultHeight * defaultHeight * 5) {
-                    let scale = defaultHeightHalf / h;
-                    e = { w: snap(w * scale), h: snap(h * scale) }
-                }
-
-                const rect: Rect = this.getRect(e, newTiles);
-                newTiles.push({
-                    ...tile,
-                    rect
-                });
-
-                this.updatePage(this._currentPage.page)({
-                    detail: { ...page, tiles: newTiles }
-                });
+                placeTile(tile);
+            }
+        }
+        expando();
+        let i = 0;
+        while(i < 100) {
+            const r = findInnerTile();
+            if(r) {
+                newTiles[i++].rect = r;
+                expando();
+            }
+            else {
+                break
             }
         }
 
+        return {newTiles, badness: badness()};
     }
 
     uploadImages = async (e: { detail: File[] }) => {
