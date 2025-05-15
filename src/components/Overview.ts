@@ -4,8 +4,8 @@ import { serverUrlPrefix } from '../constants';
 import './NewTiles';
 import './Tile';
 import './TileMobile';
-import type { Image, ImageMetadata, SiteDatabaseObject } from './Types';
-import { stateM } from './stateM';
+import type { Image, ImageMetadata, SiteDatabaseObject } from '../types';
+import { state_manager } from '../state_manager';
 
 @customElement('b-overview')
 export class Boverview extends LitElement {
@@ -100,7 +100,7 @@ export class Boverview extends LitElement {
 
     private fireUpdateEvent(url: string, metadata: ImageMetadata) {
         
-        stateM.patch(stateM.path().at('sdo').at('imageMetadata').patch({
+        state_manager.patch(state_manager.path().at('sdo').at('imageMetadata').patch({
             ...this.sdo?.imageMetadata,
             [url]: metadata
         }));

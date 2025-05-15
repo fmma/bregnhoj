@@ -1,4 +1,4 @@
-import type { Page } from "../components/Types";
+import type { Page } from "../types";
 
 export function urlify(pages: Page[], title: string, subtitle?: string) {
     if(subtitle == null)

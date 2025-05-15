@@ -1,5 +1,5 @@
 import { grid, defaultWidth, defaultHeight, minDefaultWidth, minDefaultHeight } from "../constants";
-import type { Rect } from "../components/Types";
+import type { Rect } from "../types";
 
 export class Bitmap {
 

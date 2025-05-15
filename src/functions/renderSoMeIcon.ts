@@ -1,5 +1,5 @@
 import { html } from "lit";
-import { SoMeLink } from "../components/Types";
+import { SoMeLink } from "../types";
 
 export function renderSoMeIcon(soMe: SoMeLink) {
     const url = soMeUrl(soMe)

@@ -1,7 +1,7 @@
 import { css, html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { urlify } from "../functions/urlify";
-import { Page, SoMeLink, SubPage } from "./Types";
+import { Page, SoMeLink, SubPage } from "../types";
 import { renderSoMeIcon } from "../functions/renderSoMeIcon";
 
 let counter = 0;

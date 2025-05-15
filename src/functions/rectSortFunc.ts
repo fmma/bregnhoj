@@ -1,4 +1,4 @@
-import type { Pos } from "../components/Types";
+import type { Pos } from "../types";
 
 export const norm = (p: Pos) => p.x * p.x * 0.05 + p.y * p.y;
 

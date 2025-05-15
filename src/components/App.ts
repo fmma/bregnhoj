@@ -2,14 +2,16 @@ import { configure, db, media } from '@fmma-npm/http-client';
 import { ObjPath } from '@fmma-npm/state';
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { defaultHeight, defaultHeightDouble, defaultHeightHalf, defaultWidth, grid, margin } from '../constants';
+import { defaultHeight, defaultHeightDouble, defaultHeightHalf, defaultWidth } from '../constants';
+import { get_rect } from '../functions/get_rect';
 import { getViewport } from '../functions/getWidth';
 import { isMobile } from '../functions/isMobile';
-import { overlaps } from '../functions/overlaps';
 import { readFile } from '../functions/readFile';
-import { shuffle } from '../functions/shuffle';
+import { shuffle_iteration } from '../functions/shuffle_iteration';
 import { snap } from '../functions/snap';
 import { urlify } from '../functions/urlify';
+import { State, state_manager } from '../state_manager';
+import type { Expanse, Image, Page, PageOrSubPage, Rect, SiteDatabaseObject, SiteVersion, SubPage, Tile } from '../types';
 import "./AreaSelect";
 import './Icon';
 import './ImagePreview';
@@ -22,8 +24,6 @@ import type { Bpage } from './Page';
 import './Settings';
 import './TextEditor';
 import './Tile';
-import type { Expanse, Image, Page, PageOrSubPage, Rect, SiteDatabaseObject, SiteVersion, SubPage, Tile } from './Types';
-import { State, stateM } from './stateM';
 
 configure({
     host: 'https://snesl.dk'
@@ -34,8 +34,8 @@ export class Bapp extends LitElement {
 
     constructor() {
         super();
-        stateM.observe(stateM.path(), () => {
-            return this._state = stateM.state;
+        state_manager.observe(state_manager.path(), () => {
+            return this._state = state_manager.state;
         });
     }
 
@@ -82,7 +82,7 @@ export class Bapp extends LitElement {
     mobile = isMobile();
 
     @state()
-    _state = stateM.state;
+    _state = state_manager.state;
 
     @state()
     previewTileIndex?: { pageIndex: number, subPageIndex?: number, tileIndex: number };
@@ -101,9 +101,9 @@ export class Bapp extends LitElement {
                     ? sdo.devVersion
                     : sdo.publishedVersion
             ) ?? [{ title: 'Ny side', subPages: [], tiles: [] }];
-            stateM.reset({ pages, sdo });
+            state_manager.reset({ pages, sdo });
         }
-        setTimeout(() => 
+        setTimeout(() =>
             this.trySetCurrentPage()
         );
     }
@@ -226,22 +226,22 @@ export class Bapp extends LitElement {
     }
 
     set pages(pages: Page[]) {
-        stateM.patch(stateM.path().at('pages').patch(pages));
+        state_manager.patch(state_manager.path().at('pages').patch(pages));
     }
     get sdo() {
         return this._state.sdo;
     }
 
     set sdo(sdo: SiteDatabaseObject) {
-        stateM.patch(stateM.path().at('sdo').patch(sdo));
+        state_manager.patch(state_manager.path().at('sdo').patch(sdo));
     }
 
     get canUndo() {
-        return stateM.canUndo;
+        return state_manager.canUndo;
     }
 
     get canRedo() {
-        return stateM.canRedo
+        return state_manager.canRedo
     }
 
     get canSave() {
@@ -258,7 +258,7 @@ export class Bapp extends LitElement {
 
         if (this._currentPage.sub != null) {
             const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
-            const r: Rect = this.getRect(e, subPage.tiles);
+            const r: Rect = get_rect(e, subPage.tiles);
             const detail: Tile = { rect: r, textBlock: { text: '<h1>Overskrift</h1><p>Skriv tekst her</p>' } }
             this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
                 detail: {
@@ -269,7 +269,7 @@ export class Bapp extends LitElement {
         }
         else {
             const page = this.pages[this._currentPage.page]
-            const r: Rect = this.getRect(e, page.tiles);
+            const r: Rect = get_rect(e, page.tiles);
             const detail: Tile = { rect: r, textBlock: { text: '<h1>Overskrift</h1><p>Skriv tekst her</p>' } }
             this.updatePage(this._currentPage.page)({
                 detail: {
@@ -281,68 +281,20 @@ export class Bapp extends LitElement {
 
     }
 
-    getRect(e: Expanse, tiles: Tile[]): Rect {
-        const r = { ...e, x: 0, y: 0 };
-        let swazzle = true;
-        for (let y = 1; ; y += defaultHeight + 1) {
-            swazzle = !swazzle;
-            if (swazzle) {
-                for (let x = 100 - e.w - 2 - margin; x >= 1 + margin; --x) {
-                    r.x = x;
-                    r.y = y;
-                    let o = false;
-                    for (const t of tiles) {
-                        if (overlaps(r, t.rect))
-                            o = true;
-                    }
-                    if (!o)
-                        return r;
-                    o = false;
-                    r.y += defaultHeightHalf + 1;
-                    for (const t of tiles) {
-                        if (overlaps(r, t.rect))
-                            o = true;
-                    }
-                    if (!o)
-                        return r;
-                }
-            }
-            else {
-                for (let x = 1 + margin; x < 100 - e.w - 1 - margin; ++x) {
-                    r.x = x;
-                    r.y = y;
-                    let o = false;
-                    for (const t of tiles) {
-                        if (overlaps(r, t.rect))
-                            o = true;
-                    }
-                    if (!o)
-                        return r;
-                    o = false;
-                    r.y += defaultHeightHalf + 1;
-                    for (const t of tiles) {
-                        if (overlaps(r, t.rect))
-                            o = true;
-                    }
-                    if (!o)
-                        return r;
-                }
-            }
-        }
-    }
-
     shuffle = () => {
+        const tiles = this._currentPage.sub != null
+            ? this.pages[this._currentPage.page].subPages[this._currentPage.sub].tiles
+            : this.pages[this._currentPage.page].tiles;
 
-        let { newTiles, badness } = this.shuffleIteration();
-        for(let i = 0; i < 20; ++i) {
-            const r = this.shuffleIteration();
-            if(r.badness < badness) {
+        let { newTiles, badness } = shuffle_iteration(tiles);
+        for (let i = 0; i < 20; ++i) {
+            const r = shuffle_iteration(tiles);
+            if (r.badness < badness) {
                 newTiles = r.newTiles;
                 badness = r.badness;
             }
         }
 
-        
         if (this._currentPage.sub != null) {
             const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
             this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
@@ -355,135 +307,6 @@ export class Bapp extends LitElement {
                 detail: { ...page, tiles: newTiles }
             });
         }
-    }
-
-    shuffleIteration = () => {
-        const newTiles: Tile[] = [];
-        const placeTile = (tile: Tile) => {
-            if (tile.image == null) {
-                newTiles.push(tile);
-                return;
-            }
-            const { w, h } = tile.image;
-
-            const magicNumber = Math.random() < 0.2 ? 2 : 1;
-            let scale = magicNumber * defaultHeight / h;
-            let e: Expanse = { w: snap(w * scale), h: snap(h * scale) }
-            if (e.w * e.h < defaultHeight * defaultHeight * 0.6) {
-                let scale = defaultHeightDouble / h;
-                e = { w: snap(w * scale), h: snap(h * scale) }
-            }
-            else if (e.w * e.h > defaultHeight * defaultHeight * 5) {
-                let scale = defaultHeightHalf / h;
-                e = { w: snap(w * scale), h: snap(h * scale) }
-            }
-
-            const rect: Rect = this.getRect(e, newTiles);
-            newTiles.push({
-                ...tile,
-                rect
-            });
-        }
-        const isFreeRect= (r: Rect, exempt?: Tile) => {
-            const hasOverlap = newTiles.filter(t0 => t0 !== exempt).some(t0 => overlaps(r, t0.rect));
-            return !hasOverlap;
-        }
-        const getMaxH = () => newTiles.map((t) => Math.max(t.rect.y + t.rect.h)).reduce((a, b) => Math.max(a,b));
-        const findInnerTile = () => {
-            const maxH = getMaxH();
-
-            for(let x = margin; x < 100 - 2 - margin; ++x) {
-                for(let y = 1; y < maxH; ++y) {
-                    const r = {x, y, w: 3, h: 3};
-                    if(isFreeRect(r)) {
-                        exandTileInPlace(r)
-                        return r;
-                    }
-                }
-            }
-        }
-        const exandTileInPlace = (r: Rect, t?: Tile) => {        
-            const maxH = getMaxH();    
-            while(r.x > 1 + margin) {
-                r.x -= 1;
-                r.w += 1;
-                if(isFreeRect(r, t)) {
-                    //ok
-                }
-                else {
-                    r.x += 1;
-                    r.w -= 1;
-                    break;
-                }
-            }
-            
-            while(r.x + r.w < 100 - 2 - margin) {
-                r.w += 1;
-                if(isFreeRect(r, t)) {
-                    //ok
-                }
-                else {
-                    r.w -= 1;
-                    break;
-                }
-            }
-            
-            while(r.y + r.h < maxH) {
-                r.h += 1;
-                if(isFreeRect(r, t)) {
-                    //ok
-                }
-                else {
-                    r.h -= 1;
-                    break;
-                }
-            }
-        }
-        const expando = () => {
-            for(const t of newTiles) {
-                exandTileInPlace(t.rect, t);
-            }
-        }
-        const badness = () => {
-            let badness = 0;
-            for(const t of newTiles) {
-                if(t.image) {
-                    const actualArea = t.rect.w * t.rect.h;
-                    const actualRatio = t.rect.w / t.rect.h;
-                    const optimalRatio = t.image.w / t.image.h;
-                    let b = actualRatio - optimalRatio;
-                    b = b * b;
-                    badness = Math.max(badness, b) + actualArea / 1000;
-                }
-            }
-            return badness;
-        }
-        if (this._currentPage.sub != null) {
-            const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
-            for (const tile of shuffle(subPage.tiles)) {
-                placeTile(tile);
-            }
-        }
-        else {
-            const page = this.pages[this._currentPage.page]
-            for (const tile of shuffle(page.tiles)) {
-                placeTile(tile);
-            }
-        }
-        expando();
-        let i = 0;
-        while(i < 100) {
-            const r = findInnerTile();
-            if(r) {
-                newTiles[i++].rect = r;
-                expando();
-            }
-            else {
-                break
-            }
-        }
-
-        return {newTiles, badness: badness()};
     }
 
     uploadImages = async (e: { detail: File[] }) => {
@@ -504,7 +327,7 @@ export class Bapp extends LitElement {
 
             if (this._currentPage.sub != null) {
                 const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
-                const rect: Rect = this.getRect(e, subPage.tiles);
+                const rect: Rect = get_rect(e, subPage.tiles);
 
                 const detail: Tile = {
                     rect,
@@ -530,7 +353,7 @@ export class Bapp extends LitElement {
             }
             else {
                 const page = this.pages[this._currentPage.page]
-                const rect: Rect = this.getRect(e, page.tiles);
+                const rect: Rect = get_rect(e, page.tiles);
 
                 const detail: Tile = {
                     rect,
@@ -567,13 +390,13 @@ export class Bapp extends LitElement {
 
     undo = () => {
         if (this.canUndo) {
-            stateM.undo();
+            state_manager.undo();
         }
     }
 
     redo = () => {
         if (this.canRedo) {
-            stateM.redo();
+            state_manager.redo();
         }
     }
 
@@ -581,13 +404,13 @@ export class Bapp extends LitElement {
         if (!this.sdo?.devVersion)
             this.openSettings();
         this.editting = true;
-        stateM.reset();
+        state_manager.reset();
         await this.loadSite();
     }
 
     stopEditting = async () => {
         this.editting = false;
-        stateM.reset();
+        state_manager.reset();
         await this.loadSite();
     }
 
@@ -621,7 +444,7 @@ export class Bapp extends LitElement {
                         t.image.url = url;
                         t.image.isNew = false;
                     }
-    
+
                 }
             }
             const dbValue = pages.map(page => ({
@@ -660,7 +483,7 @@ export class Bapp extends LitElement {
                     })
                 }))
             }));
-    
+
             const obj = await this.getSiteObject();
             const version = obj?.versions.find(x => x.name === this.sdo?.devVersion)
             if (obj == null || version == null) {
@@ -671,17 +494,17 @@ export class Bapp extends LitElement {
             obj.soMeLinks = this.sdo.soMeLinks;
             await this.putPages(this.sdo?.devVersion, dbValue);
             await this.putSiteObject(obj);
-    
+
             this.saving = false;
             this.stopEditting();
         }
 
-        
+
         try {
             await saveInternal();
         }
-        catch(err) {
-            
+        catch (err) {
+
             this.saving = false;
             alert("Noget gik galt! Det er nok en god ide at reloade siden. Beklager.");
         }
@@ -873,8 +696,8 @@ export class Bapp extends LitElement {
 
         let pagePath: ObjPath<State, PageOrSubPage> =
             this._currentPage.sub != null
-                ? stateM.path().at('pages').ix(this._currentPage.page).at('subPages').ix(this._currentPage.sub)
-                : stateM.path().at('pages').ix(this._currentPage.page);
+                ? state_manager.path().at('pages').ix(this._currentPage.page).at('subPages').ix(this._currentPage.sub)
+                : state_manager.path().at('pages').ix(this._currentPage.page);
 
         return html`
             <b-image-preview .sdo=${this.sdo} .tile=${this.previewTile} @close-preview=${() => this.previewTileIndex = undefined} .editting=${this.editting} .mobile=${mobile} .viewport=${this._viewport}></b-image-preview>

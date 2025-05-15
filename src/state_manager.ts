@@ -1,4 +1,4 @@
-import type { Page, SiteDatabaseObject, SoMeLink } from './Types';
+import type { Page, SiteDatabaseObject } from './types';
 import { StateManager } from '@fmma-npm/state';
 
 export type State = {
@@ -6,7 +6,7 @@ export type State = {
     sdo: SiteDatabaseObject;
 };
 
-export const stateM = new StateManager<State>({
+export const state_manager = new StateManager<State>({
     emptyState: {
         pages: [], sdo: {
             devVersion: '',

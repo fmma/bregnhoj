@@ -3,7 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { serverUrlPrefix } from "../constants";
 import { getHeight } from '../functions/getWidth';
 import './Icon';
-import type { SiteDatabaseObject, Tile, Viewport } from "./Types";
+import type { SiteDatabaseObject, Tile, Viewport } from "../types";
 
 @customElement('b-image-preview')
 export class BimagePreview extends LitElement {

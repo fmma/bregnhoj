@@ -4,9 +4,9 @@ import './NewTiles';
 import type { BnewTiles } from './NewTiles';
 import './Tile';
 import './TileMobile';
-import type { PageOrSubPage, Rect, Tile, Viewport } from './Types';
+import type { PageOrSubPage, Rect, Tile, Viewport } from '../types';
 import { ObjPath } from '@fmma-npm/state';
-import { State, stateM } from './stateM';
+import { State, state_manager } from '../state_manager';
 import { overlaps } from '../functions/overlaps';
 
 @customElement('b-page')
@@ -61,7 +61,7 @@ export class Bpage extends LitElement {
         };
         if(this.path == null)
             return;
-        stateM.patch(this.path?.at('tiles').patch([...this.tiles, newIm]))
+        state_manager.patch(this.path?.at('tiles').patch([...this.tiles, newIm]))
     }
 
     newTiles = (e: CustomEvent<Tile[]>) => {
@@ -71,7 +71,7 @@ export class Bpage extends LitElement {
         
         if(this.path == null)
             return;
-        stateM.patch(this.path?.at('tiles').patch([...this.tiles, ...newIm]))
+        state_manager.patch(this.path?.at('tiles').patch([...this.tiles, ...newIm]))
     }
 
     activateTile = (i: number) => (e: CustomEvent<boolean>) => {
@@ -99,13 +99,13 @@ export class Bpage extends LitElement {
         });
         if(this.path == null)
             return;
-        stateM.patch(this.path.at('tiles').patch(newTiles))
+        state_manager.patch(this.path.at('tiles').patch(newTiles))
     }
 
     deleteTile = () => {
         if(this.path == null)
             return;
-        stateM.patch(this.path?.at('tiles').patch(this.tiles.filter((_, j) => !this.activeTiles.includes(j))))
+        state_manager.patch(this.path?.at('tiles').patch(this.tiles.filter((_, j) => !this.activeTiles.includes(j))))
     }
 
     growTile = (e: CustomEvent<{tile: {tile: Tile, index:number}, up: boolean, down: boolean, left: boolean, right: boolean}>) => {
@@ -154,7 +154,7 @@ export class Bpage extends LitElement {
         }
 
 
-        stateM.patch(this.path?.at('tiles').ix(e.detail.tile.index).patch({...e.detail.tile.tile, rect: r}));
+        state_manager.patch(this.path?.at('tiles').ix(e.detail.tile.index).patch({...e.detail.tile.tile, rect: r}));
     }
 
     openPreview = (i: number) => () => {

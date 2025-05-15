@@ -4,7 +4,7 @@ import { grid } from '../constants';
 import { readFile } from '../functions/readFile';
 import { snap } from '../functions/snap';
 import { Bitmap } from '../models/bitmap';
-import type { Rect, Tile, Viewport } from './Types';
+import type { Rect, Tile, Viewport } from '../types';
 
 @customElement('b-new-tiles')
 export class BnewTiles extends LitElement {

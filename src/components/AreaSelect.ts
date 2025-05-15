@@ -2,7 +2,7 @@ import { css, html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { overlaps } from "../functions/overlaps";
 import type { Btile } from "./Tile";
-import type { Pos } from "./Types";
+import type { Pos } from "../types";
 
 @customElement('b-area-select')
 export class BareaSelect extends LitElement {

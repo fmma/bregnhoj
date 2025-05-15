@@ -1,4 +1,4 @@
-import type { Viewport } from "../components/Types";
+import type { Viewport } from "../types";
 
 export function getWidth() {
   return document.body.clientWidth;

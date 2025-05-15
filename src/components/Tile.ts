@@ -6,8 +6,8 @@ import { readFile } from '../functions/readFile';
 import { snap } from '../functions/snap';
 import './Icon';
 import { getText } from './TextEditor';
-import type { Image, Pos, Rect, TextBlock, Tile } from './Types';
-import { State, stateM } from './stateM';
+import type { Image, Pos, Rect, TextBlock, Tile } from '../types';
+import { State, state_manager } from '../state_manager';
 import { ObjPath } from '@fmma-npm/state';
 
 // const activeTiles = new Set<Btile>();
@@ -62,7 +62,7 @@ export class Btile extends LitElement {
         if(image) {
             if(this.path == null)
                 return;
-            stateM.patch(this.path.at('image').patch(image));
+            state_manager.patch(this.path.at('image').patch(image));
         }
     }
 
@@ -76,7 +76,7 @@ export class Btile extends LitElement {
         if(textBlock) {
             if(this.path == null)
                 return;
-            stateM.patch(this.path.at('textBlock').patch(textBlock));
+            state_manager.patch(this.path.at('textBlock').patch(textBlock));
         }
     }
 

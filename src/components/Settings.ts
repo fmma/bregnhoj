@@ -2,8 +2,8 @@ import '@fmma-npm/wc-table';
 import type { Field } from '@fmma-npm/wc-table';
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { socialMediaNames, SiteDatabaseObject, SoMeLink } from "./Types";
-import { stateM } from './stateM';
+import { socialMediaNames, SiteDatabaseObject, SoMeLink } from "../types";
+import { state_manager } from '../state_manager';
 
 
 @customElement('b-settings')
@@ -42,7 +42,7 @@ export class Bsettings extends LitElement {
                             const keep = !!x.user?.trim();
                             return keep;
                         });
-                        stateM.patch(stateM.path().at('sdo').at('soMeLinks').patch([...rowsFiltered]))
+                        state_manager.patch(state_manager.path().at('sdo').at('soMeLinks').patch([...rowsFiltered]))
                     }
                     return html`
                         <input .value=${r.user} @change=${change}>   
@@ -53,7 +53,7 @@ export class Bsettings extends LitElement {
     }
 
     renameSite = (e: any) => {        
-        stateM.patch(stateM.path().at('sdo').at('siteTitle').patch(e.target.value));
+        state_manager.patch(state_manager.path().at('sdo').at('siteTitle').patch(e.target.value));
     }
 
     render() {

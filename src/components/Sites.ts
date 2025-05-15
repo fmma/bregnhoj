@@ -2,7 +2,7 @@ import '@fmma-npm/wc-table';
 import { db } from "@fmma-npm/http-client";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { Page, SiteDatabaseObject, Sites } from "./Types";
+import type { Page, SiteDatabaseObject, Sites } from "../types";
 import type { Field } from '@fmma-npm/wc-table';
 
 @customElement('b-sites')

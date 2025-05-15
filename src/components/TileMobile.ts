@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { getHeight, getWidth } from '../functions/getWidth';
 import './Icon';
-import type { Tile } from './Types';
+import type { Tile } from '../types';
 
 const serverUrlPrefix = 'https://snesl.dk/media/';
 

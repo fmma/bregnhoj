@@ -2,8 +2,8 @@ import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { renderSoMeIcon } from "../functions/renderSoMeIcon";
 import { urlify } from "../functions/urlify";
-import { socialMediaNames, Page, SubPage, SoMeLink } from "./Types";
-import { stateM } from "./stateM";
+import { Page, SubPage, SoMeLink } from "../types";
+import { state_manager } from "../state_manager";
 
 type EditType = { k: 'menu', i: number } | { k: 'submenu', i: number, j: number };
 
@@ -29,7 +29,7 @@ export class Nav extends LitElement {
     }
 
     set ps(pages: Page[]) {
-        stateM.patch(stateM.path().at('pages').patch(pages));
+        state_manager.patch(state_manager.path().at('pages').patch(pages));
     }
 
 
