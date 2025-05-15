@@ -8,6 +8,7 @@ export const defaultHeightDouble = 39;
 export const minDefaultWidth = 10;
 export const minDefaultHeight = 10;
 export const grid = 1;
+export const margin = 5;
 
 export const mobileBreakpoint = 1024;
 

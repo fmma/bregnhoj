@@ -1,4 +1,4 @@
-import type { Page, SiteDatabaseObject } from './Types';
+import type { Page, SiteDatabaseObject, SoMeLink } from './Types';
 import { StateManager } from '@fmma-npm/state';
 
 export type State = {

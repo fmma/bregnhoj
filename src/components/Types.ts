@@ -46,6 +46,26 @@ export interface SiteDatabaseObject {
     publishedVersion: string;
     devVersion: string;
     imageMetadata?: Record<string, ImageMetadata>
+    soMeLinks?: SoMeLink[]
+}
+
+export const socialMediaNames = [
+    'facebook',
+    'x-twitter',
+    'instagram',
+    'pinterest',
+    'snapchat-ghost',
+    'vimeo',
+    'tumblr',
+    'flickr',
+    'tiktok',
+] as const
+
+export type SoMeName = (typeof socialMediaNames)[number];
+
+export interface SoMeLink {
+    name: SoMeName
+    user: string
 }
 
 export interface Sites {

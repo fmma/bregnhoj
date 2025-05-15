@@ -2,7 +2,7 @@ import { configure, db, media } from '@fmma-npm/http-client';
 import { ObjPath } from '@fmma-npm/state';
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { defaultHeight, defaultHeightDouble, defaultHeightHalf, defaultWidth } from '../constants';
+import { defaultHeight, defaultHeightDouble, defaultHeightHalf, defaultWidth, grid, margin } from '../constants';
 import { getViewport } from '../functions/getWidth';
 import { isMobile } from '../functions/isMobile';
 import { overlaps } from '../functions/overlaps';
@@ -19,7 +19,7 @@ import './NewTiles';
 import './Overview';
 import './Page';
 import type { Bpage } from './Page';
-import './SiteVersions';
+import './Settings';
 import './TextEditor';
 import './Tile';
 import type { Expanse, Image, Page, PageOrSubPage, Rect, SiteDatabaseObject, SiteVersion, SubPage, Tile } from './Types';
@@ -88,7 +88,7 @@ export class Bapp extends LitElement {
     previewTileIndex?: { pageIndex: number, subPageIndex?: number, tileIndex: number };
 
     @state()
-    _isSiteVersionsOpened = false;
+    _isSettingsOpened = false;
 
     async loadSite() {
         const sdo = await this.getSiteObject()
@@ -221,6 +221,10 @@ export class Bapp extends LitElement {
         return this._state.pages;
     }
 
+    get soMeLinks() {
+        return this._state.sdo.soMeLinks ?? [];
+    }
+
     set pages(pages: Page[]) {
         stateM.patch(stateM.path().at('pages').patch(pages));
     }
@@ -244,7 +248,7 @@ export class Bapp extends LitElement {
         return this.canUndo;
     }
 
-    get canOpenSiteVersions() {
+    get canOpenSettings() {
         return !this.canSave;
     }
 
@@ -283,7 +287,7 @@ export class Bapp extends LitElement {
         for (let y = 1; ; y += defaultHeight + 1) {
             swazzle = !swazzle;
             if (swazzle) {
-                for (let x = 100 - e.w - 2; x >= 1; --x) {
+                for (let x = 100 - e.w - 2 - margin; x >= 1 + margin; --x) {
                     r.x = x;
                     r.y = y;
                     let o = false;
@@ -304,7 +308,7 @@ export class Bapp extends LitElement {
                 }
             }
             else {
-                for (let x = 1; x < 100 - e.w - 1; ++x) {
+                for (let x = 1 + margin; x < 100 - e.w - 1 - margin; ++x) {
                     r.x = x;
                     r.y = y;
                     let o = false;
@@ -328,70 +332,158 @@ export class Bapp extends LitElement {
     }
 
     shuffle = () => {
+
+        let { newTiles, badness } = this.shuffleIteration();
+        for(let i = 0; i < 20; ++i) {
+            const r = this.shuffleIteration();
+            if(r.badness < badness) {
+                newTiles = r.newTiles;
+                badness = r.badness;
+            }
+        }
+
+        
+        if (this._currentPage.sub != null) {
+            const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
+            this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
+                detail: { ...subPage, tiles: newTiles }
+            });
+        }
+        else {
+            const page = this.pages[this._currentPage.page]
+            this.updatePage(this._currentPage.page)({
+                detail: { ...page, tiles: newTiles }
+            });
+        }
+    }
+
+    shuffleIteration = () => {
         const newTiles: Tile[] = [];
+        const placeTile = (tile: Tile) => {
+            if (tile.image == null) {
+                newTiles.push(tile);
+                return;
+            }
+            const { w, h } = tile.image;
+
+            const magicNumber = Math.random() < 0.2 ? 2 : 1;
+            let scale = magicNumber * defaultHeight / h;
+            let e: Expanse = { w: snap(w * scale), h: snap(h * scale) }
+            if (e.w * e.h < defaultHeight * defaultHeight * 0.6) {
+                let scale = defaultHeightDouble / h;
+                e = { w: snap(w * scale), h: snap(h * scale) }
+            }
+            else if (e.w * e.h > defaultHeight * defaultHeight * 5) {
+                let scale = defaultHeightHalf / h;
+                e = { w: snap(w * scale), h: snap(h * scale) }
+            }
+
+            const rect: Rect = this.getRect(e, newTiles);
+            newTiles.push({
+                ...tile,
+                rect
+            });
+        }
+        const isFreeRect= (r: Rect, exempt?: Tile) => {
+            const hasOverlap = newTiles.filter(t0 => t0 !== exempt).some(t0 => overlaps(r, t0.rect));
+            return !hasOverlap;
+        }
+        const getMaxH = () => newTiles.map((t) => Math.max(t.rect.y + t.rect.h)).reduce((a, b) => Math.max(a,b));
+        const findInnerTile = () => {
+            const maxH = getMaxH();
+
+            for(let x = margin; x < 100 - 2 - margin; ++x) {
+                for(let y = 1; y < maxH; ++y) {
+                    const r = {x, y, w: 3, h: 3};
+                    if(isFreeRect(r)) {
+                        exandTileInPlace(r)
+                        return r;
+                    }
+                }
+            }
+        }
+        const exandTileInPlace = (r: Rect, t?: Tile) => {        
+            const maxH = getMaxH();    
+            while(r.x > 1 + margin) {
+                r.x -= 1;
+                r.w += 1;
+                if(isFreeRect(r, t)) {
+                    //ok
+                }
+                else {
+                    r.x += 1;
+                    r.w -= 1;
+                    break;
+                }
+            }
+            
+            while(r.x + r.w < 100 - 2 - margin) {
+                r.w += 1;
+                if(isFreeRect(r, t)) {
+                    //ok
+                }
+                else {
+                    r.w -= 1;
+                    break;
+                }
+            }
+            
+            while(r.y + r.h < maxH) {
+                r.h += 1;
+                if(isFreeRect(r, t)) {
+                    //ok
+                }
+                else {
+                    r.h -= 1;
+                    break;
+                }
+            }
+        }
+        const expando = () => {
+            for(const t of newTiles) {
+                exandTileInPlace(t.rect, t);
+            }
+        }
+        const badness = () => {
+            let badness = 0;
+            for(const t of newTiles) {
+                if(t.image) {
+                    const actualArea = t.rect.w * t.rect.h;
+                    const actualRatio = t.rect.w / t.rect.h;
+                    const optimalRatio = t.image.w / t.image.h;
+                    let b = actualRatio - optimalRatio;
+                    b = b * b;
+                    badness = Math.max(badness, b) + actualArea / 1000;
+                }
+            }
+            return badness;
+        }
         if (this._currentPage.sub != null) {
             const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
             for (const tile of shuffle(subPage.tiles)) {
-                if (tile.image == null) {
-                    newTiles.push(tile);
-                    continue;
-                }
-                const { w, h } = tile.image;
-
-                let scale = defaultHeight / h;
-                let e: Expanse = { w: snap(w * scale), h: snap(h * scale) }
-                if (e.w * e.h < defaultHeight * defaultHeight * 0.6) {
-                    let scale = defaultHeightDouble / h;
-                    e = { w: snap(w * scale), h: snap(h * scale) }
-                }
-                else if (e.w * e.h > defaultHeight * defaultHeight * 5) {
-                    let scale = defaultHeightHalf / h;
-                    e = { w: snap(w * scale), h: snap(h * scale) }
-                }
-
-                const rect: Rect = this.getRect(e, newTiles);
-                newTiles.push({
-                    ...tile,
-                    rect
-                });
-
-                this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
-                    detail: { ...subPage, tiles: newTiles }
-                });
+                placeTile(tile);
             }
         }
         else {
             const page = this.pages[this._currentPage.page]
             for (const tile of shuffle(page.tiles)) {
-                if (tile.image == null) {
-                    newTiles.push(tile);
-                    continue;
-                }
-                const { w, h } = tile.image;
-
-                let scale = defaultHeight / h;
-                let e: Expanse = { w: snap(w * scale), h: snap(h * scale) }
-                if (e.w * e.h < defaultHeight * defaultHeight * 0.6) {
-                    let scale = defaultHeightDouble / h;
-                    e = { w: snap(w * scale), h: snap(h * scale) }
-                }
-                else if (e.w * e.h > defaultHeight * defaultHeight * 5) {
-                    let scale = defaultHeightHalf / h;
-                    e = { w: snap(w * scale), h: snap(h * scale) }
-                }
-
-                const rect: Rect = this.getRect(e, newTiles);
-                newTiles.push({
-                    ...tile,
-                    rect
-                });
-
-                this.updatePage(this._currentPage.page)({
-                    detail: { ...page, tiles: newTiles }
-                });
+                placeTile(tile);
+            }
+        }
+        expando();
+        let i = 0;
+        while(i < 100) {
+            const r = findInnerTile();
+            if(r) {
+                newTiles[i++].rect = r;
+                expando();
+            }
+            else {
+                break
             }
         }
 
+        return {newTiles, badness: badness()};
     }
 
     uploadImages = async (e: { detail: File[] }) => {
@@ -465,12 +557,12 @@ export class Bapp extends LitElement {
         }
     }
 
-    openSiteVersions = () => {
-        this._isSiteVersionsOpened = true;
+    openSettings = () => {
+        this._isSettingsOpened = true;
     }
 
-    closeSiteVersions = () => {
-        this._isSiteVersionsOpened = false;
+    closeSettings = () => {
+        this._isSettingsOpened = false;
     }
 
     undo = () => {
@@ -487,7 +579,7 @@ export class Bapp extends LitElement {
 
     startEditting = async () => {
         if (!this.sdo?.devVersion)
-            this.openSiteVersions();
+            this.openSettings();
         this.editting = true;
         stateM.reset();
         await this.loadSite();
@@ -576,6 +668,7 @@ export class Bapp extends LitElement {
             }
             version.modified = new Date();
             obj.imageMetadata = this.sdo.imageMetadata;
+            obj.soMeLinks = this.sdo.soMeLinks;
             await this.putPages(this.sdo?.devVersion, dbValue);
             await this.putSiteObject(obj);
     
@@ -698,7 +791,7 @@ export class Bapp extends LitElement {
 
             await this.putSiteObject(obj);
             await this.loadSite();
-            this.closeSiteVersions();
+            this.closeSettings();
         },
 
         delete: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
@@ -746,20 +839,16 @@ export class Bapp extends LitElement {
     }
 
     render() {
-        const { openPreview, pages, mobile } = this;
+        const { openPreview, pages, mobile, soMeLinks } = this;
 
 
-        if (this._isSiteVersionsOpened) {
+        if (this._isSettingsOpened) {
             return html`
-                <b-site-versions
-                    @change-site-name=${this.siteVersionsEventHandlers.change}
-                    @duplicate-site-version=${this.siteVersionsEventHandlers.duplicate}
-                    @open-site-version=${this.siteVersionsEventHandlers.open}
-                    @delete-site-version=${this.siteVersionsEventHandlers.delete}
-                    @publish-site-version=${this.siteVersionsEventHandlers.publish}
+                <b-settings
                     @rename-site=${this.siteVersionsEventHandlers.renameSite}
                     .siteDabaseObject=${this.sdo}
-                ></b-site-versions>
+                ></b-settings>
+                <button @click=${() => this.closeSettings()}> Luk indstillinger </button>
             `;
         }
 
@@ -771,7 +860,7 @@ export class Bapp extends LitElement {
             return this.editting
                 ? html`
                     <div class="buttons${mobile ? '-mobile' : ''}">
-                        <b-icon title="Filer" icon="folder-tree" @click=${this.openSiteVersions}></b-icon>
+                        <b-icon title="Rå" icon="code" @click=${this.openSettings}></b-icon>
                     </div>
                 `
                 : nothing;
@@ -792,9 +881,9 @@ export class Bapp extends LitElement {
             <div class="outer">
                 <div class="pages">
                     ${mobile
-                ? html`<b-nav-mobile .pages=${pages} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav-mobile>`
+                ? html`<b-nav-mobile .pages=${pages} .soMeLinks=${soMeLinks} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav-mobile>`
                 : html`
-                            <b-nav .pages=${pages} .editting=${this.editting} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav>
+                            <b-nav .pages=${pages}  .soMeLinks=${soMeLinks} .editting=${this.editting} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav>
                         `
             }
                     <div class="page-wrapper">
@@ -838,7 +927,7 @@ export class Bapp extends LitElement {
                             <b-icon title="Bland billeder" @click=${this.shuffle} icon="shuffle"></b-icon>
                             <b-icon title="Ny tekstboks" @click=${this.newTextBox} icon="edit-text"></b-icon>
                             <b-icon title="Upload billede(r)" @file-change=${this.uploadImages} icon="file" file-input multiple accept="image/jpeg, image/png, image/jpg"></b-icon>
-                            <b-icon title="Filer" @click=${this.openSiteVersions} .disabled=${!this.canOpenSiteVersions} icon="folder-tree"></b-icon>
+                            <b-icon title="Indstillinger" @click=${this.openSettings} .disabled=${!this.canOpenSettings} icon="code"></b-icon>
                             <b-icon title="Undo" @click=${this.undo} .disabled=${saving || !this.canUndo} icon="undo"></b-icon>
                             <b-icon title="Redo" @click=${this.redo} .disabled=${saving || !this.canRedo} icon="redo"></b-icon>
                             <b-icon title="Gem" @click=${gem} .disabled=${saving || !this.canSave} icon="save"></b-icon>

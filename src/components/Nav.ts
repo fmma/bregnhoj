@@ -1,7 +1,8 @@
-import { css, html, LitElement, nothing } from "lit";
+import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { renderSoMeIcon } from "../functions/renderSoMeIcon";
 import { urlify } from "../functions/urlify";
-import type { Page, SubPage } from "./Types";
+import { socialMediaNames, Page, SubPage, SoMeLink } from "./Types";
 import { stateM } from "./stateM";
 
 type EditType = { k: 'menu', i: number } | { k: 'submenu', i: number, j: number };
@@ -16,6 +17,9 @@ export class Nav extends LitElement {
 
     @property({type: Array})
     pages!: Page[];
+
+    @property({type: Array})
+    soMeLinks!: SoMeLink[]
 
     @property({type: Boolean})
     editting = false;
@@ -200,6 +204,9 @@ export class Nav extends LitElement {
                         `
                         : nothing
                 }
+                ${this.soMeLinks.map(soMeLink => soMeLink.user && html`
+                        <li>${renderSoMeIcon(soMeLink)}</li>
+                    `)}
             </ul>
         </div>
         `

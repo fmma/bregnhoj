@@ -8,8 +8,8 @@
     "dev": "snowpack dev",
     "build": "tsc && snowpack build",
     "scp": "snowpack build && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/snesl.dk/bregnhoj/",
-    "scp-bregnhoj": "snowpack build && sed -i 's/bregnhoj\\///g' build\\index.html  && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/bregnhoj.com/",
-    "scp-meisnermadsen": "snowpack build && sed -i 's/bregnhoj\\///g' build\\lisogkarsten.html && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/meisnermadsen.dk/ && scp build/lisogkarsten.html fmadsen@foadell:/home/fmadsen/www_root/domains/meisnermadsen.dk/index.html"
+    "release-bregnhoj": "snowpack build && sed -i 's/bregnhoj\\///g' build\\index.html  && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/bregnhoj.com/",
+    "release-meisnermadsen": "snowpack build && sed -i 's/bregnhoj\\///g' build\\lisogkarsten.html && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/meisnermadsen.dk/ && scp build/lisogkarsten.html fmadsen@foadell:/home/fmadsen/www_root/domains/meisnermadsen.dk/index.html"
   },
   "author": "",
   "license": "ISC",
