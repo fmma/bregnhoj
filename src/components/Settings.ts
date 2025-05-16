@@ -1,21 +1,24 @@
 import { db } from '@fmma-npm/http-client';
-import { html, LitElement, nothing } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { html, LitElement } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { state_manager } from '../state_manager';
-import { SiteDatabaseObject, SOCIAL_MEDIA_NAMES, SoMeName } from "../types";
+import { Page, SiteDatabaseObject, SOCIAL_MEDIA_NAMES, SoMeName } from "../types";
 
 
 @customElement('b-settings')
 export class Bsettings extends LitElement {
-    
+
     renderRoot: HTMLElement | ShadowRoot = this;
-    
-    constructor() {
-        super();
-        state_manager.observe(state_manager.path().at('sdo'), () => {
-            this.requestUpdate()
-        });
-    }
+
+    @state()
+    private _loading = false;
+
+    // constructor() {
+    //     super();
+    //     state_manager.observe(state_manager.path().at('sdo'), () => {
+    //         this.requestUpdate()
+    //     });
+    // }
 
     @property()
     site_root?: string;
@@ -45,9 +48,7 @@ export class Bsettings extends LitElement {
     }
 
     render() {
-        const dirty = state_manager.dirty;
         return html`
-        
             <div class="outer">
                 <div class="pages">
                     <div class="page-wrapper">
@@ -58,11 +59,7 @@ export class Bsettings extends LitElement {
                             <p>Sidens navn <input class="control-input" .value=${state_manager.state.sdo.siteTitle} @change=${this._rename_site}></p>
                             ${this._render_so_me_inputs()}
                             ${this._render_version_table()}
-                            ${dirty ? nothing : html`<button class="control-button" @click=${() => this._close_settings()}> Luk indstillinger </button>`}
-                            ${!dirty ? nothing : html`
-                                <button class="control-button" @click=${() => state_manager.undo()}> Fortryd </button>
-                                <button class="control-button" @click=${this._save_settings}> Gem </button>
-                                    `}
+                            ${html`<button class="control-button" @click=${() => this._close_settings()}> Luk indstillinger </button>`}
                         </div>
                     </div>
                 </div>
@@ -75,7 +72,9 @@ export class Bsettings extends LitElement {
     }
 
     private async _save_settings() {
-        this.dispatchEvent(new CustomEvent('save-settings'));
+        await this._put_site_object(state_manager.state.sdo);
+        state_manager.reset(state_manager.state);
+        this.requestUpdate()
     }
 
     private *_render_so_me_inputs() {
@@ -101,21 +100,23 @@ export class Bsettings extends LitElement {
                     ${this._render_version_rows()}
                 </tbody>
             </table>
-            ${dirty ? nothing : html`<button class="control-button" @click=${this._create_backup}> Lav backup </button>`}
         `;
     }
     private *_render_version_rows() {
         const dirty = state_manager.dirty;
-        for (const version of state_manager.state.sdo.versions ?? []) {
+        for (const [i, version] of (state_manager.state.sdo.versions ?? []).entries()) {
             const is_the_active_one = version.name === state_manager.state.sdo.publishedVersion;
             const tr_class = is_the_active_one ? 'active-version-tr' : '';
-            const buttons = dirty || is_the_active_one ? html`` : html`
-                <button class="control-button" @click=${this._set_published_version(version.name)}> Genopret </button>
+            const buttons = is_the_active_one ? html`
+                <span> AKTIV VERSION </span>
+                <button class="control-button" @click=${this._create_backup}> Lav backup </button>
+            ` : html`
+                <button class="control-button" @click=${this._set_published_version(version.name)}> Sæt aktiv version </button>
                 <button class="control-button" @click=${this._delete_vesion(version.name)}> Slet </button>
             `;
             yield html`
                 <tr class="${tr_class}">
-                    <td>${version.name}</td>
+                    <td><input class="control-input" .value="${version.readable_name ?? version.name}" @change=${this._set_version_name(i)}/></td>
                     <td>${version.created.toLocaleDateString()}</td>
                     <td>${version.modified.toLocaleDateString()}</td>
                     <td>
@@ -126,42 +127,76 @@ export class Bsettings extends LitElement {
         }
     }
 
-    private _set_published_version = (version: string) => () => {
-        state_manager.patch(state_manager.path().at('sdo').at('publishedVersion').patch(version));
+    private _set_version_name = (i: number) => (e: any) => {
+        state_manager.patch(state_manager.path().at('sdo').at('versions').ix(i).at('readable_name').patch(e.target.value))
+        this._save_settings();
     }
 
-    private _delete_vesion = (version: string) => () => {
-        
+    private _set_published_version = (version: string) => async () => {
+        state_manager.patch(state_manager.path().at('sdo').at('publishedVersion').patch(version));
+        await this._save_settings();
+    }
+
+    private _delete_vesion = (version: string) => async () => {
         const path = state_manager.path().at('sdo').at('versions');
         const versions = path.get(state_manager.state) ?? [];
         const to_be_deleted_version = versions.find(x => x.name === version);
-        if(to_be_deleted_version == null) {
+
+
+        if (to_be_deleted_version == null) {
             throw new Error("Could not delete version.");
         }
-        
+
+        if (!window.confirm(`Er du helt sikker på at du vil slette version '${to_be_deleted_version.readable_name ?? to_be_deleted_version.name}'? Handlingen kan ikke fortrydes.`))
+            return;
+
         state_manager.patch(path.patch(versions.filter(x => to_be_deleted_version.name !== x.name)));
+        await this._delete_pages(version);
+        await this._save_settings();
     }
 
     private _create_backup = async () => {
         const path = state_manager.path().at('sdo').at('versions');
         const versions = path.get(state_manager.state) ?? [];
         const current_version = versions.find(x => x.name === state_manager.state.sdo.publishedVersion);
-        if(current_version == null) {
+        if (current_version == null) {
             throw new Error("Could not create backup. current_vesion == null");
         }
-        
-        const name = `backup-${new Date().getTime()}` ;
-        
-        state_manager.patch(path.patch([...versions, {
-            ...current_version,
-            name
-        }]));
 
-        const to_be_backed_up_pages = await db.get(`gal/${this.site_root}/pages/${current_version.name}`);
+        const name = `version-${new Date().getTime()}`;
+
+        const to_be_backed_up_pages = await this._get_pages(current_version.name);
+        if (to_be_backed_up_pages == null) {
+            throw new Error('to_be_backed_up_pages == null');
+        }
         const check = await db.get(`gal/${this.site_root}/pages/${name}`)
-        if(check) {
+        if (check) {
             throw new Error(`Refusing to back up. Backup will override version '${name}'`);
         }
-        await db.put(`gal/${this.site_root}/pages/${name}`, to_be_backed_up_pages);
+        await this._put_pages(name, to_be_backed_up_pages)
+
+        state_manager.patch(path.patch([...versions, {
+            ...current_version,
+            name,
+            readable_name: current_version.readable_name && current_version.readable_name + ' (backup)'
+        }]));
+
+        await this._save_settings();
+    }
+
+    private _get_pages(name: string) {
+        return db.getObject<Page[]>(`gal/${this.site_root}/pages/${name}`);
+    }
+
+    private _put_pages(name: string, pages: Page[]) {
+        return db.putObject<Page[]>(`gal/${this.site_root}/pages/${name}`, pages);
+    }
+
+    private _delete_pages(name: string) {
+        return db.putObject<Page[]>(`gal/${this.site_root}/pages/${name}`, undefined);
+    }
+
+    private _put_site_object(siteObject: SiteDatabaseObject) {
+        return db.putObject<SiteDatabaseObject>(`gal/${this.site_root}/site`, siteObject);
     }
 }

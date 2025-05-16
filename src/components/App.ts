@@ -504,10 +504,6 @@ export class Bapp extends LitElement {
         return db.putObject<Page[]>(`gal/${this.site_root}/pages/${name}`, pages);
     }
 
-    private _delete_pages(name: string) {
-        return db.putObject<Page[]>(`gal/${this.site_root}/pages/${name}`, undefined);
-    }
-
     private _get_site_object() {
         return db.getObject<SiteDatabaseObject>(`gal/${this.site_root}/site`);
     }

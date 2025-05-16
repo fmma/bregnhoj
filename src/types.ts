@@ -73,6 +73,7 @@ export interface Sites {
 }
 
 export interface SiteVersion {
+    readable_name?: string;
     name: string;
     created: Date;
     modified: Date;
