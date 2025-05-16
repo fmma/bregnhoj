@@ -23,11 +23,12 @@ export class Bsettings extends LitElement {
     @property()
     site_root?: string;
 
-    private _rename_site = (e: any) => {
+    private _rename_site = async (e: any) => {
         state_manager.patch(state_manager.path().at('sdo').at('siteTitle').patch(e.target.value));
+        await this._save_settings();
     }
 
-    private _set_so_me_user = (so_me_name: SoMeName) => (e: any) => {
+    private _set_so_me_user = (so_me_name: SoMeName) => async (e: any) => {
         const value = e.target.value;
         const path = state_manager.path().at('sdo').at('soMeLinks');
         const filtered_so_me_links = (path.get(state_manager.state) ?? []).filter(x => x.name !== so_me_name);
@@ -45,6 +46,7 @@ export class Bsettings extends LitElement {
         else {
             state_manager.patch(path.patch(filtered_so_me_links))
         }
+        await this._save_settings();
     }
 
     render() {
@@ -127,9 +129,9 @@ export class Bsettings extends LitElement {
         }
     }
 
-    private _set_version_name = (i: number) => (e: any) => {
+    private _set_version_name = (i: number) => async (e: any) => {
         state_manager.patch(state_manager.path().at('sdo').at('versions').ix(i).at('readable_name').patch(e.target.value))
-        this._save_settings();
+        await this._save_settings();
     }
 
     private _set_published_version = (version: string) => async () => {
