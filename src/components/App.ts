@@ -52,9 +52,7 @@ export class Bapp extends LitElement {
         this._load_site();
     }
     get site_root() {
-        if (this._site_root == null)
-            throw new Error('Site root not set');
-        return this._site_root;
+        return this._site_root ?? '';
     }
 
     @state()
