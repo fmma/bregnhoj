@@ -34,6 +34,24 @@ progress {
     width: 100%;
 }
 
+.control-page {
+    font-size: 30px;
+    background-color: white;
+    border: 1px solid black;
+}
+
+.control-input {
+    font-size: 30px;
+}
+
+.control-button {
+    font-size: 30px;
+}
+
+.active-version-tr {
+    background-color: greenyellow;
+}
+
 .outer {
     height: 100%;
     width: 100%;

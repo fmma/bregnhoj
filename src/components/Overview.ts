@@ -1,11 +1,10 @@
 import { LitElement, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { serverUrlPrefix } from '../constants';
-import './NewTiles';
+import { IMG_URL_PREFIX } from '../constants';
+import { state_manager } from '../state_manager';
+import type { Image, ImageMetadata, SiteDatabaseObject } from '../types';
 import './Tile';
 import './TileMobile';
-import type { Image, ImageMetadata, SiteDatabaseObject } from './Types';
-import { stateM } from './stateM';
 
 @customElement('b-overview')
 export class Boverview extends LitElement {
@@ -25,12 +24,12 @@ export class Boverview extends LitElement {
 
         return html`<h1>Rediger undertekster</h1>
         <div style="display: flex;flex-wrap: wrap;">
-            ${urls.map(u => this._renderImage(u))}
+            ${urls.map(u => this._render_image(u))}
         </div>
         `;
     }
 
-    getMetadata(url: string): ImageMetadata {
+    private _get_metadata(url: string): ImageMetadata {
         const m = this.sdo?.imageMetadata?.[url];
         if (m == null) {
             const i = this.images.find(x => x.bigurl === url);
@@ -39,21 +38,21 @@ export class Boverview extends LitElement {
         return { ...m };
     }
 
-    _renderImage(url: string) {
+    private _render_image(url: string) {
         const id = url.split('.')[0];
-        const m = this.getMetadata(url);
+        const m = this._get_metadata(url);
         return html`
             <div style="display:flex;margin:10px ">
                 <span>
-                <img src="${serverUrlPrefix}${m.thumbUrl}" width=250 height=250 style = "object-fit: cover;"/>
+                <img src="${IMG_URL_PREFIX}${m.thumbUrl}" width=250 height=250 style = "object-fit: cover;"/>
                 </span>
                 <span>
                     <input id="titel-${id}" .value=${m.title ?? ''}
                     @change=${(e: InputEvent) => {
                 const v = (e.composedPath()[0] as HTMLInputElement).value;
-                const metadata = this.getMetadata(url);
+                const metadata = this._get_metadata(url);
                 metadata.title = v;
-                this.fireUpdateEvent(url, metadata);
+                this._fire_update_event(url, metadata);
             }}>
                     <label for="titel-${id}">Titel</label>
                     
@@ -61,9 +60,9 @@ export class Boverview extends LitElement {
                     <input id="pris-${id}" .value=${m.price ?? ''}
                     @change=${(e: InputEvent) => {
                 const v = (e.composedPath()[0] as HTMLInputElement).value;
-                const metadata = this.getMetadata(url);
+                const metadata = this._get_metadata(url);
                 metadata.price = v;
-                this.fireUpdateEvent(url, metadata);
+                this._fire_update_event(url, metadata);
             }}>
                     <label for="pris-${id}">Pris</label>
 
@@ -71,15 +70,15 @@ export class Boverview extends LitElement {
                     <input id="bredde-${id}" .value=${m.sizeW ?? ''}
                     @change=${(e: InputEvent) => {
                 const v = (e.composedPath()[0] as HTMLInputElement).value;
-                const metadata = this.getMetadata(url);
+                const metadata = this._get_metadata(url);
                 metadata.sizeW = v;
-                this.fireUpdateEvent(url, metadata);
+                this._fire_update_event(url, metadata);
             }}>x<input id="hojde-${id}" .value=${m.sizeH ?? ''}
                     @change=${(e: InputEvent) => {
                 const v = (e.composedPath()[0] as HTMLInputElement).value;
-                const metadata = this.getMetadata(url);
+                const metadata = this._get_metadata(url);
                 metadata.sizeH = v;
-                this.fireUpdateEvent(url, metadata);
+                this._fire_update_event(url, metadata);
             }}>
                     <label for="hojde-${id}">Størrelse</label>
 
@@ -87,9 +86,9 @@ export class Boverview extends LitElement {
                     <textarea style="width: 343px; height: 164px;" id="beskrivelse-${id}" .value=${m.description ?? ''}
                     @change=${(e: InputEvent) => {
                 const v = (e.composedPath()[0] as HTMLInputElement).value;
-                const metadata = this.getMetadata(url);
+                const metadata = this._get_metadata(url);
                 metadata.description = v;
-                this.fireUpdateEvent(url, metadata);
+                this._fire_update_event(url, metadata);
             }}>
                     </textarea>
                     <label for="beskrivelse-${id}">Beskrivelse</label>
@@ -98,9 +97,9 @@ export class Boverview extends LitElement {
         `;
     }
 
-    private fireUpdateEvent(url: string, metadata: ImageMetadata) {
-        
-        stateM.patch(stateM.path().at('sdo').at('imageMetadata').patch({
+    private _fire_update_event(url: string, metadata: ImageMetadata) {
+
+        state_manager.patch(state_manager.path().at('sdo').at('imageMetadata').patch({
             ...this.sdo?.imageMetadata,
             [url]: metadata
         }));

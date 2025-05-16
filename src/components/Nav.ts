@@ -1,9 +1,9 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { renderSoMeIcon } from "../functions/renderSoMeIcon";
+import { render_so_me_icon } from "../functions/render_so_me_icon";
 import { urlify } from "../functions/urlify";
-import { socialMediaNames, Page, SubPage, SoMeLink } from "./Types";
-import { stateM } from "./stateM";
+import { Page, SubPage, SoMeLink } from "../types";
+import { state_manager } from "../state_manager";
 
 type EditType = { k: 'menu', i: number } | { k: 'submenu', i: number, j: number };
 
@@ -13,37 +13,39 @@ export class Nav extends LitElement {
     renderRoot = this;
 
     @property({type: String})
-    siteTitle: string = '';
+    site_title: string = '';
 
     @property({type: Array})
     pages!: Page[];
 
     @property({type: Array})
-    soMeLinks!: SoMeLink[]
+    so_me_links!: SoMeLink[]
 
     @property({type: Boolean})
     editting = false;
 
-    get ps() {
+    @state()
+    private _edit?: EditType;
+
+    private get _pages() {
         return this.pages;
     }
 
-    set ps(pages: Page[]) {
-        stateM.patch(stateM.path().at('pages').patch(pages));
+    private set _pages(pages: Page[]) {
+        state_manager.patch(state_manager.path().at('pages').patch(pages));
     }
 
-
-    navigate = (i: number, j: number | undefined) => () => {
+    private _navigate = (i: number, j: number | undefined) => () => {
         const detail = {i,j};
         this.dispatchEvent(new CustomEvent('nav', {detail}))
     }
 
-    toggleEdit(e: EditType) {
-        if(this.editIsCurrent(e)) {
-            this.edit = undefined;
+    private _toggle_edit(e: EditType) {
+        if(this._edit_is_current(e)) {
+            this._edit = undefined;
             return;
         }
-        this.edit = e;
+        this._edit = e;
         setTimeout(() => {
             const input = this.querySelector('.visible-input') as HTMLInputElement | undefined;
             input?.focus();
@@ -51,108 +53,91 @@ export class Nav extends LitElement {
         })
     }
 
-
-    @state()
-    edit?: EditType;
-
-    editIsCurrent(e: EditType) {
-        const { edit } = this;
+    private _edit_is_current(e: EditType) {
+        const { _edit: edit } = this;
         return JSON.stringify(e) === JSON.stringify(edit);
     }
 
-    updateTitle = (i: number) => (e: InputEvent) => {
-        const { ps } = this;
+    private _update_title = (i: number) => (e: InputEvent) => {
+        const { _pages: ps } = this;
         const newTitle = (e.composedPath()[0] as HTMLInputElement).value;
-        this.ps = [...ps.slice(0, i), { ...ps[i], title: newTitle }, ...ps.slice(i + 1)];
-        this.toggleEdit({ k: 'menu', i });
+        this._pages = [...ps.slice(0, i), { ...ps[i], title: newTitle }, ...ps.slice(i + 1)];
+        this._toggle_edit({ k: 'menu', i });
     }
 
-
-    updateSubTitle = (i: number, j: number) => (e: InputEvent) => {
+    private _update_sub_title = (i: number, j: number) => (e: InputEvent) => {
         const newTitle = (e.composedPath()[0] as HTMLInputElement).value;
-        const { ps } = this;
+        const { _pages: ps } = this;
         const page = ps[i];
         const subPage = page.subPages[j];
-        this.ps = [...ps.slice(0, i), { ...page, subPages: [...page.subPages.slice(0, j), { ...subPage, title: newTitle }, ...page.subPages.slice(j + 1)] }, ...ps.slice(i + 1)];
-        this.toggleEdit({ k: 'submenu', i, j });
+        this._pages = [...ps.slice(0, i), { ...page, subPages: [...page.subPages.slice(0, j), { ...subPage, title: newTitle }, ...page.subPages.slice(j + 1)] }, ...ps.slice(i + 1)];
+        this._toggle_edit({ k: 'submenu', i, j });
     }
 
-    updatePage = (i: number) => (e: { detail: Page }) => {
-        const { ps } = this;
-        this.ps = [...ps.slice(0, i), e.detail, ...ps.slice(i + 1)];
+    private _new_page = () => {
+        const { _pages: ps } = this;
+        this._pages = [...ps, { title: 'Ny side', tiles: [], subPages: [] }]
     }
 
-    updateSubPage = (i: number, j: number) => (e: { detail: SubPage }) => {
-        const { ps } = this;
+    private _new_sub_page = (i: number) => () => {
+        const { _pages: ps } = this;
         const page = ps[i];
-        this.ps = [...ps.slice(0, i), { ...page, subPages: [...page.subPages.slice(0, j), e.detail, ...page.subPages.slice(j + 1)] }, ...ps.slice(i + 1)];
+        this._pages = [...ps.slice(0, i), { ...page, subPages: [...page.subPages, { title: 'Ny underside', tiles: [] }] }, ...ps.slice(i + 1)]
     }
 
-    newPage = () => {
-        const { ps } = this;
-        this.ps = [...ps, { title: 'Ny side', tiles: [], subPages: [] }]
-    }
-
-    newSubPage = (i: number) => () => {
-        const { ps } = this;
-        const page = ps[i];
-        this.ps = [...ps.slice(0, i), { ...page, subPages: [...page.subPages, { title: 'Ny underside', tiles: [] }] }, ...ps.slice(i + 1)]
-    }
-
-    deletePage = (i: number) => () => {
-        this.ps = this.ps.filter((_, j) => i !== j);
+    private _delete_page = (i: number) => () => {
+        this._pages = this._pages.filter((_, j) => i !== j);
         location.hash = '';
     }
 
-    moveLeft = (i: number) => () => {
+    private _delete_sub_page = (i: number, j: number) => () => {
+        const { _pages: ps } = this;
+        const page = ps[i];
+        this._pages = [...ps.slice(0, i), { ...page, subPages: page.subPages.filter((_, k) => k !== j) }, ...ps.slice(i + 1)];
+        location.hash = '';
+    }
+
+    private _move_page_left = (i: number) => () => {
         if(i === 0)
             return;
-        this.ps = this.ps.map((p, j) => j === i ? this.ps[i-1] : j === i - 1 ? this.ps[i] : p);
+        this._pages = this._pages.map((p, j) => j === i ? this._pages[i-1] : j === i - 1 ? this._pages[i] : p);
     }
-    moveRight = (i: number) => () => {
-        if(i === this.ps.length - 1)
+    
+    private _move_page_right = (i: number) => () => {
+        if(i === this._pages.length - 1)
             return;
-        this.ps = this.ps.map((p, j) => j === i ? this.ps[i+1] : j === i + 1 ? this.ps[i] : p);
+        this._pages = this._pages.map((p, j) => j === i ? this._pages[i+1] : j === i + 1 ? this._pages[i] : p);
     }
 
-    deleteSubPage = (i: number, j: number) => () => {
-        const { ps } = this;
-        const page = ps[i];
-        this.ps = [...ps.slice(0, i), { ...page, subPages: page.subPages.filter((_, k) => k !== j) }, ...ps.slice(i + 1)];
-        location.hash = '';
-    }
-
-    blurInput = (edit: EditType) => () => {
+    private _blur_input = (edit: EditType) => () => {
         setTimeout(() => {
-            if(this.editIsCurrent(edit)) {
-                return this.edit = undefined;
+            if(this._edit_is_current(edit)) {
+                return this._edit = undefined;
             }
         }, 100)
     }
 
-    renderMenu() {
-        const { updateSubTitle, deleteSubPage, updateTitle, newPage, newSubPage, deletePage, navigate, moveLeft, moveRight, ps } = this;
-
+    private _render_menu() {
         return html`
         <div class="menu-header">
             <h1 class="menu-h1">
-                <a href="#">${this.siteTitle}</a>
+                <a href="#">${this.site_title}</a>
             </h1>
         </div>
         <div class="menu">
             <ul>
-                ${ps.map((page, i) => html`
+                ${this._pages.map((page, i) => html`
                 <li>
-                    <a href="#${urlify(this.pages, page.title)}" @click=${navigate(i, undefined)}
-                        class="topmenu ${this.editIsCurrent({ k: 'menu', i }) ? 'hidden' : ''}"
+                    <a href="#${urlify(this.pages, page.title)}" @click=${this._navigate(i, undefined)}
+                        class="topmenu ${this._edit_is_current({ k: 'menu', i }) ? 'hidden' : ''}"
                         >${page.title}
                     </a>
                     ${
                         this.editting
                             ? html`
                                 <input value=${page.title}
-                                    @change=${updateTitle(i)} class="${this.editIsCurrent({ k: 'menu', i }) ? 'visible-input' : 'hidden'}"
-                                    @blur=${this.blurInput({ k: 'menu', i })}
+                                    @change=${this._update_title(i)} class="${this._edit_is_current({ k: 'menu', i }) ? 'visible-input' : 'hidden'}"
+                                    @blur=${this._blur_input({ k: 'menu', i })}
                                 >
                             `
                             : nothing
@@ -162,17 +147,17 @@ export class Nav extends LitElement {
                             
                             ${this.editting ? html`
                                 <li>
-                                    <b-icon title="Rediger" icon="edit"  @click=${() => this.toggleEdit({ k: 'menu', i })}></b-icon>
-                                    <b-icon title="Slet" icon="delete" @click=${deletePage(i)}></b-icon>
-                                    <b-icon title="Flyt til venstre" icon="left" @click=${moveLeft(i)}></b-icon>
-                                    <b-icon title="Flyt til højre" icon="right" @click=${moveRight(i)}></b-icon>
-                                    <b-icon title="Tilføj ny underside" icon="add" @click=${newSubPage(i)}></b-icon>
+                                    <b-icon title="Rediger" icon="edit"  @click=${() => this._toggle_edit({ k: 'menu', i })}></b-icon>
+                                    <b-icon title="Slet" icon="delete" @click=${this._delete_page(i)}></b-icon>
+                                    <b-icon title="Flyt til venstre" icon="left" @click=${this._move_page_left(i)}></b-icon>
+                                    <b-icon title="Flyt til højre" icon="right" @click=${this._move_page_right(i)}></b-icon>
+                                    <b-icon title="Tilføj ny underside" icon="add" @click=${this._new_sub_page(i)}></b-icon>
                                 </li>
                             `: nothing}
                             ${page.subPages.map((subPage, j) => html`
                             <li>
-                                <a href="#${urlify(this.pages, page.title, subPage.title)}" @click=${navigate(i,j)}
-                                            class="${this.editIsCurrent({ k: 'submenu', i, j }) ? 'hidden' : ''}"
+                                <a href="#${urlify(this.pages, page.title, subPage.title)}" @click=${this._navigate(i,j)}
+                                            class="${this._edit_is_current({ k: 'submenu', i, j }) ? 'hidden' : ''}"
                                     >
                                     ${subPage.title}
                                 </a>
@@ -180,12 +165,12 @@ export class Nav extends LitElement {
                                     this.editting
                                         ? html`
                                             <input value=${subPage.title}
-                                                @change=${updateSubTitle(i, j)} class="${this.editIsCurrent({ k: 'submenu', i, j }) ? 'visible-input' : 'hidden'}"
-                                                @blur=${this.blurInput({ k: 'submenu', i, j })}
+                                                @change=${this._update_sub_title(i, j)} class="${this._edit_is_current({ k: 'submenu', i, j }) ? 'visible-input' : 'hidden'}"
+                                                @blur=${this._blur_input({ k: 'submenu', i, j })}
                                             >
 
-                                            <b-icon title="Rediger" icon="edit" @click=${() => this.toggleEdit({ k: 'submenu', i, j })}></b-icon>
-                                            <b-icon title="Slet" icon="delete" @click=${deleteSubPage(i, j)}></b-icon>
+                                            <b-icon title="Rediger" icon="edit" @click=${() => this._toggle_edit({ k: 'submenu', i, j })}></b-icon>
+                                            <b-icon title="Slet" icon="delete" @click=${this._delete_sub_page(i, j)}></b-icon>
                                         `
                                         : nothing
                                 }
@@ -199,20 +184,20 @@ export class Nav extends LitElement {
                     this.editting
                         ? html`
                         <li class="new-page-button">
-                            <b-icon title="Tilføj ny side" icon="add" @click=${newPage}></b-icon>
+                            <b-icon title="Tilføj ny side" icon="add" @click=${this._new_page}></b-icon>
                         </li>
                         `
                         : nothing
                 }
-                ${this.soMeLinks.map(soMeLink => soMeLink.user && html`
-                        <li>${renderSoMeIcon(soMeLink)}</li>
+                ${this.so_me_links.map(soMeLink => soMeLink.user && html`
+                        <li>${render_so_me_icon(soMeLink)}</li>
                     `)}
             </ul>
         </div>
-        `
+        `;
     }
 
     render() {
-        return this.renderMenu();
+        return this._render_menu();
     }
 }

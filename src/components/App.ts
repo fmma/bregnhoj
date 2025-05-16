@@ -2,31 +2,30 @@ import { configure, db, media } from '@fmma-npm/http-client';
 import { ObjPath } from '@fmma-npm/state';
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { defaultHeight, defaultHeightDouble, defaultHeightHalf, defaultWidth, grid, margin } from '../constants';
-import { getViewport } from '../functions/getWidth';
-import { isMobile } from '../functions/isMobile';
-import { overlaps } from '../functions/overlaps';
-import { readFile } from '../functions/readFile';
-import { shuffle } from '../functions/shuffle';
+import { API_HOST, DEFAULT_HEIGHT, DEFAULT_HEIGHT_DOUBLE, DEFAULT_HEIGHT_HALF, DEFAULT_WIDTH } from '../constants';
+import { get_rect } from '../functions/get_rect';
+import { get_viewport } from '../functions/get_width';
+import { is_mobile } from '../functions/is_mobile';
+import { read_file } from '../functions/read_file';
+import { shuffle_iteration } from '../functions/shuffle_iteration';
 import { snap } from '../functions/snap';
 import { urlify } from '../functions/urlify';
-import "./AreaSelect";
+import { State, state_manager } from '../state_manager';
+import type { Expanse, Image, Page, PageOrSubPage, Rect, SiteDatabaseObject, SiteVersion, SubPage, Tile } from '../types';
 import './Icon';
 import './ImagePreview';
 import './Nav';
 import './NavMobile';
-import './NewTiles';
+import './NewSite';
 import './Overview';
 import './Page';
 import type { Bpage } from './Page';
 import './Settings';
 import './TextEditor';
 import './Tile';
-import type { Expanse, Image, Page, PageOrSubPage, Rect, SiteDatabaseObject, SiteVersion, SubPage, Tile } from './Types';
-import { State, stateM } from './stateM';
 
 configure({
-    host: 'https://snesl.dk'
+    host: API_HOST
 });
 
 @customElement('b-app')
@@ -34,233 +33,221 @@ export class Bapp extends LitElement {
 
     constructor() {
         super();
-        stateM.observe(stateM.path(), () => {
-            return this._state = stateM.state;
+        state_manager.observe(state_manager.path(), () => {
+            return this._state = state_manager.state;
         });
     }
 
     renderRoot = this;
 
-    _setLoading = (e: CustomEvent<{ i: number, n: number } | undefined>) => {
-        this.loading = e.detail;
+    private _set_loading = (e: CustomEvent<{ i: number, n: number } | undefined>) => {
+        this._loading = e.detail;
     }
 
-    _siteRoot?: string;
+    private _site_root?: string;
+
     @property({ type: String, reflect: true, attribute: 'site-root' })
-    set siteRoot(x: string) {
-        this._siteRoot = x;
-        this.loadSite();
+    set site_root(x: string) {
+        this._site_root = x;
+        this._load_site();
     }
-    get siteRoot() {
-        if (this._siteRoot == null)
+    get site_root() {
+        if (this._site_root == null)
             throw new Error('Site root not set');
-        return this._siteRoot;
+        return this._site_root;
     }
 
-    @property({ type: Boolean, reflect: true })
-    dev = false
+    @state()
+    private _comming_from_desktop = false;
 
     @state()
-    commingFromDesktop = false;
+    private _viewport = get_viewport();
 
     @state()
-    _viewport = getViewport();
+    private _current_page: { page: number, sub?: number } = { page: 0 };
 
     @state()
-    _currentPage: { page: number, sub?: number } = { page: 0 };
+    private _editting = false;
 
     @state()
-    editting = false;
+    private _saving = false;
 
     @state()
-    saving = false;
+    private _loading?: { i: number, n: number }
 
     @state()
-    loading?: { i: number, n: number }
+    private _mobile = is_mobile();
 
     @state()
-    mobile = isMobile();
+    private _state = state_manager.state;
 
     @state()
-    _state = stateM.state;
+    private _preview_tile_index?: { pageIndex: number, subPageIndex?: number, tileIndex: number };
 
     @state()
-    previewTileIndex?: { pageIndex: number, subPageIndex?: number, tileIndex: number };
+    private _is_settings_opened = false;
 
     @state()
-    _isSettingsOpened = false;
+    private _site_is_new = false;
 
-    async loadSite() {
-        const sdo = await this.getSiteObject()
+    private async _load_site() {
+        const sdo = await this._get_site_object()
         if (sdo != null) {
-            if (sdo.devVersion === sdo.publishedVersion) {
+            const pages = await this._get_pages(sdo.publishedVersion) ?? [{ title: 'Ny side', subPages: [], tiles: [] }];
+            state_manager.reset({ pages, sdo });
 
-            }
-            const pages = await this.getPages(
-                this.dev
-                    ? sdo.devVersion
-                    : sdo.publishedVersion
-            ) ?? [{ title: 'Ny side', subPages: [], tiles: [] }];
-            stateM.reset({ pages, sdo });
+            setTimeout(() =>
+                this._try_set_current_page()
+            );
         }
-        setTimeout(() => 
-            this.trySetCurrentPage()
-        );
+        else {
+            this._site_is_new = true;
+        }
     }
 
-    get tiles() {
-        return this.pages.flatMap(p => [...p.tiles, ...p.subPages.flatMap(sp => sp.tiles)]);
+    private get _tiles() {
+        return this._pages.flatMap(p => [...p.tiles, ...p.subPages.flatMap(sp => sp.tiles)]);
     }
 
-    get images() {
-        return this.tiles.map(t => t.image).filter((x): x is Image => x != null);
+    private get _images() {
+        return this._tiles.map(t => t.image).filter((x): x is Image => x != null);
     }
 
-    trySetCurrentPage() {
+    private _try_set_current_page() {
         const hash = window.location.hash.slice(1);
 
-        for (const [i, page] of this.pages.entries()) {
-            if (hash == urlify(this.pages, page.title)) {
-                this._currentPage = { page: i }
+        for (const [i, page] of this._pages.entries()) {
+            if (hash == urlify(this._pages, page.title)) {
+                this._current_page = { page: i }
                 return;
             }
             for (const [j, subPage] of page.subPages.entries()) {
-                if (hash == urlify(this.pages, page.title, subPage.title)) {
-                    this._currentPage = { page: i, sub: j };
+                if (hash == urlify(this._pages, page.title, subPage.title)) {
+                    this._current_page = { page: i, sub: j };
                     return;
                 }
             }
         }
-        this._currentPage = { page: 0 };
+        this._current_page = { page: 0 };
     }
 
-    updatePage = (i: number) => (e: { detail: Page }) => {
-        const { pages } = this;
-        this.pages = [...pages.slice(0, i), e.detail, ...pages.slice(i + 1)];
-    }
-    updatePages = (e: { detail: Page[] }) => {
-        this.pages = e.detail;
+    private _update_page = (i: number) => (e: { detail: Page }) => {
+        const pages = this._pages;
+        this._pages = [...pages.slice(0, i), e.detail, ...pages.slice(i + 1)];
     }
 
-    openPreview = (e: { detail: { tileIndex: number } }) => {
-        const { page, sub } = this._currentPage;
-        this.previewTileIndex = { pageIndex: page, subPageIndex: sub, tileIndex: e.detail.tileIndex };
+    private _open_preview = (e: { detail: { tileIndex: number } }) => {
+        const { page, sub } = this._current_page;
+        this._preview_tile_index = { pageIndex: page, subPageIndex: sub, tileIndex: e.detail.tileIndex };
     }
 
-    updateSubPage = (i: number, j: number) => (e: { detail: SubPage }) => {
-        const { pages } = this;
+    private _update_sub_page = (i: number, j: number) => (e: { detail: SubPage }) => {
+        const pages = this._pages;
         const page = pages[i];
-        this.pages = [...pages.slice(0, i), { ...page, subPages: [...page.subPages.slice(0, j), e.detail, ...page.subPages.slice(j + 1)] }, ...pages.slice(i + 1)];
+        this._pages = [...pages.slice(0, i), { ...page, subPages: [...page.subPages.slice(0, j), e.detail, ...page.subPages.slice(j + 1)] }, ...pages.slice(i + 1)];
     }
 
     connectedCallback(): void {
         super.connectedCallback();
-        window.addEventListener('resize', this.resize);
-        window.addEventListener('hashchange', this.hashChange);
-        window.addEventListener('keyup', this.keyup)
-        window.addEventListener('keydown', this.keydown)
-        window.addEventListener('keypress', this.keypress)
-        screen.orientation.addEventListener('change', this.resize);
+        window.addEventListener('resize', this._resize);
+        window.addEventListener('hashchange', this._hash_change);
+        window.addEventListener('keyup', this._keyup)
+        window.addEventListener('keydown', this._keydown)
+        window.addEventListener('keypress', this._keypress)
+        screen.orientation.addEventListener('change', this._resize);
     }
 
     disconnectedCallback(): void {
         super.disconnectedCallback();
-        window.removeEventListener('resize', this.resize);
-        window.removeEventListener('hashchange', this.hashChange);
-        window.removeEventListener('keyup', this.keyup);
-        window.removeEventListener('keydown', this.keydown);
-        window.removeEventListener('keypress', this.keypress);
-        screen.orientation.removeEventListener('change', this.resize);
+        window.removeEventListener('resize', this._resize);
+        window.removeEventListener('hashchange', this._hash_change);
+        window.removeEventListener('keyup', this._keyup);
+        window.removeEventListener('keydown', this._keydown);
+        window.removeEventListener('keypress', this._keypress);
+        screen.orientation.removeEventListener('change', this._resize);
     }
 
-    hashChange = () => this.trySetCurrentPage()
+    private _hash_change = () => this._try_set_current_page()
 
-    keyup = (e: KeyboardEvent) => {
+    private _keyup = (e: KeyboardEvent) => {
     }
-    keydown = (e: KeyboardEvent) => {
+    private _keydown = (e: KeyboardEvent) => {
         if (this.querySelector('b-text-editor') != null)
             return;
         if (e.key === 'a' && e.ctrlKey) {
             e.preventDefault();
             const currentPage = this.querySelector('b-page') as Bpage | undefined;
             if (currentPage != null) {
-                currentPage.activeTiles = currentPage.tiles.map((_, i) => i);
+                currentPage.active_tiles = currentPage.tiles.map((_, i) => i);
             }
         }
         else if (e.key === 'z' && e.ctrlKey) {
-            this.undo();
+            this._undo();
         }
         else if (e.key === 'y' && e.ctrlKey) {
-            this.redo();
+            this._redo();
         }
     }
-    keypress = (e: KeyboardEvent) => {
+    private _keypress = (e: KeyboardEvent) => {
     }
 
-    resize = (e: Event) => {
-        const newViewport = getViewport();
+    private _resize = (e: Event) => {
+        const newViewport = get_viewport();
         if (newViewport.pixelRatio === this._viewport.pixelRatio && newViewport.width === this._viewport.width)
             return;
 
-        this.mobile = isMobile();
+        this._mobile = is_mobile();
         this._viewport = newViewport;
     }
 
-    get previewTile() {
-        const ix = this.previewTileIndex
+    private get _preview_tile() {
+        const ix = this._preview_tile_index
         if (ix == null)
             return undefined;
         const { pageIndex, tileIndex, subPageIndex } = ix;
 
         return subPageIndex == null
-            ? this.pages[pageIndex].tiles[tileIndex]
-            : this.pages[pageIndex].subPages[subPageIndex].tiles[tileIndex];
+            ? this._pages[pageIndex].tiles[tileIndex]
+            : this._pages[pageIndex].subPages[subPageIndex].tiles[tileIndex];
     }
 
-    get pages() {
+    private get _pages() {
         return this._state.pages;
     }
+    private set _pages(pages: Page[]) {
+        state_manager.patch(state_manager.path().at('pages').patch(pages));
+    }
 
-    get soMeLinks() {
+    private get so_me_links() {
         return this._state.sdo.soMeLinks ?? [];
     }
-
-    set pages(pages: Page[]) {
-        stateM.patch(stateM.path().at('pages').patch(pages));
-    }
-    get sdo() {
+    private get _sdo() {
         return this._state.sdo;
     }
-
-    set sdo(sdo: SiteDatabaseObject) {
-        stateM.patch(stateM.path().at('sdo').patch(sdo));
+    private set _sdo(sdo: SiteDatabaseObject) {
+        state_manager.patch(state_manager.path().at('sdo').patch(sdo));
+    }
+    private get _can_undo() {
+        return state_manager.canUndo;
+    }
+    private get _can_redo() {
+        return state_manager.canRedo
+    }
+    private get _can_save() {
+        return this._can_undo;
+    }
+    private get _can_open_settings() {
+        return !this._can_save;
     }
 
-    get canUndo() {
-        return stateM.canUndo;
-    }
+    private _new_text_box = () => {
+        const e: Expanse = { w: DEFAULT_WIDTH, h: DEFAULT_HEIGHT }
 
-    get canRedo() {
-        return stateM.canRedo
-    }
-
-    get canSave() {
-        return this.canUndo;
-    }
-
-    get canOpenSettings() {
-        return !this.canSave;
-    }
-
-
-    newTextBox = () => {
-        const e: Expanse = { w: defaultWidth, h: defaultHeight }
-
-        if (this._currentPage.sub != null) {
-            const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
-            const r: Rect = this.getRect(e, subPage.tiles);
+        if (this._current_page.sub != null) {
+            const subPage = this._pages[this._current_page.page].subPages[this._current_page.sub];
+            const r: Rect = get_rect(e, subPage.tiles);
             const detail: Tile = { rect: r, textBlock: { text: '<h1>Overskrift</h1><p>Skriv tekst her</p>' } }
-            this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
+            this._update_sub_page(this._current_page.page, this._current_page.sub)({
                 detail: {
                     ...subPage,
                     tiles: [...subPage.tiles, detail]
@@ -268,243 +255,65 @@ export class Bapp extends LitElement {
             });
         }
         else {
-            const page = this.pages[this._currentPage.page]
-            const r: Rect = this.getRect(e, page.tiles);
+            const page = this._pages[this._current_page.page]
+            const r: Rect = get_rect(e, page.tiles);
             const detail: Tile = { rect: r, textBlock: { text: '<h1>Overskrift</h1><p>Skriv tekst her</p>' } }
-            this.updatePage(this._currentPage.page)({
+            this._update_page(this._current_page.page)({
                 detail: {
                     ...page,
                     tiles: [...page.tiles, detail]
                 }
             })
         }
-
     }
 
-    getRect(e: Expanse, tiles: Tile[]): Rect {
-        const r = { ...e, x: 0, y: 0 };
-        let swazzle = true;
-        for (let y = 1; ; y += defaultHeight + 1) {
-            swazzle = !swazzle;
-            if (swazzle) {
-                for (let x = 100 - e.w - 2 - margin; x >= 1 + margin; --x) {
-                    r.x = x;
-                    r.y = y;
-                    let o = false;
-                    for (const t of tiles) {
-                        if (overlaps(r, t.rect))
-                            o = true;
-                    }
-                    if (!o)
-                        return r;
-                    o = false;
-                    r.y += defaultHeightHalf + 1;
-                    for (const t of tiles) {
-                        if (overlaps(r, t.rect))
-                            o = true;
-                    }
-                    if (!o)
-                        return r;
-                }
-            }
-            else {
-                for (let x = 1 + margin; x < 100 - e.w - 1 - margin; ++x) {
-                    r.x = x;
-                    r.y = y;
-                    let o = false;
-                    for (const t of tiles) {
-                        if (overlaps(r, t.rect))
-                            o = true;
-                    }
-                    if (!o)
-                        return r;
-                    o = false;
-                    r.y += defaultHeightHalf + 1;
-                    for (const t of tiles) {
-                        if (overlaps(r, t.rect))
-                            o = true;
-                    }
-                    if (!o)
-                        return r;
-                }
-            }
-        }
-    }
+    private _shuffle = () => {
+        const tiles = this._current_page.sub != null
+            ? this._pages[this._current_page.page].subPages[this._current_page.sub].tiles
+            : this._pages[this._current_page.page].tiles;
 
-    shuffle = () => {
-
-        let { newTiles, badness } = this.shuffleIteration();
-        for(let i = 0; i < 20; ++i) {
-            const r = this.shuffleIteration();
-            if(r.badness < badness) {
+        let { newTiles, badness } = shuffle_iteration(tiles);
+        for (let i = 0; i < 200; ++i) {
+            const r = shuffle_iteration(tiles);
+            if (r.badness < badness) {
                 newTiles = r.newTiles;
                 badness = r.badness;
             }
         }
 
-        
-        if (this._currentPage.sub != null) {
-            const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
-            this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
+        if (this._current_page.sub != null) {
+            const subPage = this._pages[this._current_page.page].subPages[this._current_page.sub];
+            this._update_sub_page(this._current_page.page, this._current_page.sub)({
                 detail: { ...subPage, tiles: newTiles }
             });
         }
         else {
-            const page = this.pages[this._currentPage.page]
-            this.updatePage(this._currentPage.page)({
+            const page = this._pages[this._current_page.page]
+            this._update_page(this._current_page.page)({
                 detail: { ...page, tiles: newTiles }
             });
         }
     }
 
-    shuffleIteration = () => {
-        const newTiles: Tile[] = [];
-        const placeTile = (tile: Tile) => {
-            if (tile.image == null) {
-                newTiles.push(tile);
-                return;
-            }
-            const { w, h } = tile.image;
-
-            const magicNumber = Math.random() < 0.2 ? 2 : 1;
-            let scale = magicNumber * defaultHeight / h;
-            let e: Expanse = { w: snap(w * scale), h: snap(h * scale) }
-            if (e.w * e.h < defaultHeight * defaultHeight * 0.6) {
-                let scale = defaultHeightDouble / h;
-                e = { w: snap(w * scale), h: snap(h * scale) }
-            }
-            else if (e.w * e.h > defaultHeight * defaultHeight * 5) {
-                let scale = defaultHeightHalf / h;
-                e = { w: snap(w * scale), h: snap(h * scale) }
-            }
-
-            const rect: Rect = this.getRect(e, newTiles);
-            newTiles.push({
-                ...tile,
-                rect
-            });
-        }
-        const isFreeRect= (r: Rect, exempt?: Tile) => {
-            const hasOverlap = newTiles.filter(t0 => t0 !== exempt).some(t0 => overlaps(r, t0.rect));
-            return !hasOverlap;
-        }
-        const getMaxH = () => newTiles.map((t) => Math.max(t.rect.y + t.rect.h)).reduce((a, b) => Math.max(a,b));
-        const findInnerTile = () => {
-            const maxH = getMaxH();
-
-            for(let x = margin; x < 100 - 2 - margin; ++x) {
-                for(let y = 1; y < maxH; ++y) {
-                    const r = {x, y, w: 3, h: 3};
-                    if(isFreeRect(r)) {
-                        exandTileInPlace(r)
-                        return r;
-                    }
-                }
-            }
-        }
-        const exandTileInPlace = (r: Rect, t?: Tile) => {        
-            const maxH = getMaxH();    
-            while(r.x > 1 + margin) {
-                r.x -= 1;
-                r.w += 1;
-                if(isFreeRect(r, t)) {
-                    //ok
-                }
-                else {
-                    r.x += 1;
-                    r.w -= 1;
-                    break;
-                }
-            }
-            
-            while(r.x + r.w < 100 - 2 - margin) {
-                r.w += 1;
-                if(isFreeRect(r, t)) {
-                    //ok
-                }
-                else {
-                    r.w -= 1;
-                    break;
-                }
-            }
-            
-            while(r.y + r.h < maxH) {
-                r.h += 1;
-                if(isFreeRect(r, t)) {
-                    //ok
-                }
-                else {
-                    r.h -= 1;
-                    break;
-                }
-            }
-        }
-        const expando = () => {
-            for(const t of newTiles) {
-                exandTileInPlace(t.rect, t);
-            }
-        }
-        const badness = () => {
-            let badness = 0;
-            for(const t of newTiles) {
-                if(t.image) {
-                    const actualArea = t.rect.w * t.rect.h;
-                    const actualRatio = t.rect.w / t.rect.h;
-                    const optimalRatio = t.image.w / t.image.h;
-                    let b = actualRatio - optimalRatio;
-                    b = b * b;
-                    badness = Math.max(badness, b) + actualArea / 1000;
-                }
-            }
-            return badness;
-        }
-        if (this._currentPage.sub != null) {
-            const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
-            for (const tile of shuffle(subPage.tiles)) {
-                placeTile(tile);
-            }
-        }
-        else {
-            const page = this.pages[this._currentPage.page]
-            for (const tile of shuffle(page.tiles)) {
-                placeTile(tile);
-            }
-        }
-        expando();
-        let i = 0;
-        while(i < 100) {
-            const r = findInnerTile();
-            if(r) {
-                newTiles[i++].rect = r;
-                expando();
-            }
-            else {
-                break
-            }
-        }
-
-        return {newTiles, badness: badness()};
-    }
-
-    uploadImages = async (e: { detail: File[] }) => {
+    private _upload_images = async (e: { detail: File[] }) => {
 
         for (const f of e.detail) {
-            const { compressed, uncompressed, thumbnail, w, h, ogw, ogh } = await readFile(f);
+            const { compressed, uncompressed, thumbnail, w, h, ogw, ogh } = await read_file(f);
 
-            let scale = defaultHeight / h;
+            let scale = DEFAULT_HEIGHT / h;
             let e: Expanse = { w: snap(w * scale), h: snap(h * scale) }
-            if (e.w * e.h < defaultHeight * defaultHeight * 0.6) {
-                let scale = defaultHeightDouble / h;
+            if (e.w * e.h < DEFAULT_HEIGHT * DEFAULT_HEIGHT * 0.6) {
+                let scale = DEFAULT_HEIGHT_DOUBLE / h;
                 e = { w: snap(w * scale), h: snap(h * scale) }
             }
-            else if (e.w * e.h > defaultHeight * defaultHeight * 2) {
-                let scale = defaultHeightHalf / h;
+            else if (e.w * e.h > DEFAULT_HEIGHT * DEFAULT_HEIGHT * 2) {
+                let scale = DEFAULT_HEIGHT_HALF / h;
                 e = { w: snap(w * scale), h: snap(h * scale) }
             }
 
-            if (this._currentPage.sub != null) {
-                const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
-                const rect: Rect = this.getRect(e, subPage.tiles);
+            if (this._current_page.sub != null) {
+                const subPage = this._pages[this._current_page.page].subPages[this._current_page.sub];
+                const rect: Rect = get_rect(e, subPage.tiles);
 
                 const detail: Tile = {
                     rect,
@@ -521,7 +330,7 @@ export class Bapp extends LitElement {
                     }
                 };
 
-                this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
+                this._update_sub_page(this._current_page.page, this._current_page.sub)({
                     detail: {
                         ...subPage,
                         tiles: [...subPage.tiles, detail]
@@ -529,8 +338,8 @@ export class Bapp extends LitElement {
                 });
             }
             else {
-                const page = this.pages[this._currentPage.page]
-                const rect: Rect = this.getRect(e, page.tiles);
+                const page = this._pages[this._current_page.page]
+                const rect: Rect = get_rect(e, page.tiles);
 
                 const detail: Tile = {
                     rect,
@@ -547,7 +356,7 @@ export class Bapp extends LitElement {
                     }
                 };
 
-                this.updatePage(this._currentPage.page)({
+                this._update_page(this._current_page.page)({
                     detail: {
                         ...page,
                         tiles: [...page.tiles, detail]
@@ -557,55 +366,55 @@ export class Bapp extends LitElement {
         }
     }
 
-    openSettings = () => {
-        this._isSettingsOpened = true;
+    private _open_settings = () => {
+        this._is_settings_opened = true;
     }
 
-    closeSettings = () => {
-        this._isSettingsOpened = false;
+    private _close_settings = () => {
+        this._is_settings_opened = false;
     }
 
-    undo = () => {
-        if (this.canUndo) {
-            stateM.undo();
+    private _undo = () => {
+        if (this._can_undo) {
+            state_manager.undo();
         }
     }
 
-    redo = () => {
-        if (this.canRedo) {
-            stateM.redo();
+    private _redo = () => {
+        if (this._can_redo) {
+            state_manager.redo();
         }
     }
 
-    startEditting = async () => {
-        if (!this.sdo?.devVersion)
-            this.openSettings();
-        this.editting = true;
-        stateM.reset();
-        await this.loadSite();
+    private _start_editting = async () => {
+        if (!this._sdo?.devVersion)
+            this._open_settings();
+        this._editting = true;
+        state_manager.reset();
+        await this._load_site();
     }
 
-    stopEditting = async () => {
-        this.editting = false;
-        stateM.reset();
-        await this.loadSite();
+    private _stop_editting = async () => {
+        this._editting = false;
+        state_manager.reset();
+        await this._load_site();
     }
 
-    toggleMobile = () => {
-        this.mobile = !this.mobile;
-        this.commingFromDesktop = true;
+    private _toggle_mobile = () => {
+        this._mobile = !this._mobile;
+        this._comming_from_desktop = true;
     }
 
-    gem = async () => {
-        if (this.sdo == null)
+    private _gem = async () => {
+        if (this._sdo == null)
             return;
 
         const saveFile = async (data: File | Blob, fileName: string) => {
             return await media.put(data as File, fileName);
         }
 
-        this.saving = true;
-        const { pages } = this;
+        this._saving = true;
+        const { _pages: pages } = this;
 
         const saveInternal = async () => {
             for (const p of pages.flatMap(p => [p, ...p.subPages ?? []])) {
@@ -621,7 +430,7 @@ export class Bapp extends LitElement {
                         t.image.url = url;
                         t.image.isNew = false;
                     }
-    
+
                 }
             }
             const dbValue = pages.map(page => ({
@@ -660,287 +469,149 @@ export class Bapp extends LitElement {
                     })
                 }))
             }));
-    
-            const obj = await this.getSiteObject();
-            const version = obj?.versions.find(x => x.name === this.sdo?.devVersion)
+
+            const obj = await this._get_site_object();
+            const version = obj?.versions.find(x => x.name === this._sdo?.devVersion)
             if (obj == null || version == null) {
                 return;
             }
             version.modified = new Date();
-            obj.imageMetadata = this.sdo.imageMetadata;
-            obj.soMeLinks = this.sdo.soMeLinks;
-            await this.putPages(this.sdo?.devVersion, dbValue);
-            await this.putSiteObject(obj);
-    
-            this.saving = false;
-            this.stopEditting();
+            obj.imageMetadata = this._sdo.imageMetadata;
+            obj.soMeLinks = this._sdo.soMeLinks;
+            await this._put_pages(this._sdo?.devVersion, dbValue);
+            await this._put_site_object(obj);
+
+            this._saving = false;
+            this._stop_editting();
         }
 
-        
+
         try {
             await saveInternal();
         }
-        catch(err) {
-            
-            this.saving = false;
+        catch (err) {
+
+            this._saving = false;
             alert("Noget gik galt! Det er nok en god ide at reloade siden. Beklager.");
         }
     }
 
-    getPages(name: string) {
-        const { siteRoot } = this;
-        return db.getObject<Page[]>(`gal/${siteRoot}/pages/${name}`);
+    private _get_pages(name: string) {
+        return db.getObject<Page[]>(`gal/${this.site_root}/pages/${name}`);
     }
 
-    putPages(name: string, pages: Page[]) {
-        const { siteRoot } = this;
-        return db.putObject<Page[]>(`gal/${siteRoot}/pages/${name}`, pages);
+    private _put_pages(name: string, pages: Page[]) {
+        return db.putObject<Page[]>(`gal/${this.site_root}/pages/${name}`, pages);
     }
 
-    deletePages(name: string) {
-        const { siteRoot } = this;
-        return db.putObject<Page[]>(`gal/${siteRoot}/pages/${name}`, undefined);
+    private _get_site_object() {
+        return db.getObject<SiteDatabaseObject>(`gal/${this.site_root}/site`);
     }
 
-    getSiteObject() {
-        const { siteRoot } = this;
-        return db.getObject<SiteDatabaseObject>(`gal/${siteRoot}/site`);
-    }
-
-    putSiteObject(siteObject: SiteDatabaseObject) {
-        const { siteRoot } = this;
-        return db.putObject<SiteDatabaseObject>(`gal/${siteRoot}/site`, siteObject);
-    }
-
-    siteVersionsEventHandlers = {
-        change: async (e: CustomEvent<{ row: SiteVersion, i: number, value: string }>) => {
-            const { row, i, value } = e.detail;
-            if (row.name === value)
-                return;
-
-            const obj = await this.getSiteObject();
-            const pages = await this.getPages(row.name);
-
-            if (obj == null || pages == null)
-                return;
-
-            if (obj.versions.some(x => x.name === value)) {
-                alert(`En version med navnet ${value} findes allerede`)
-                return;
-            }
-
-            obj.versions[i].name = value;
-
-            if (row.name === obj.devVersion)
-                obj.devVersion = value;
-            if (row.name === obj.publishedVersion)
-                obj.publishedVersion = value;
-
-            await this.deletePages(row.name);
-            await this.putPages(value, pages);
-            await this.putSiteObject(obj);
-
-            await this.loadSite();
-        },
-
-        duplicate: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
-            const { row, i } = e.detail;
-            const obj = await this.getSiteObject();
-            const pages = await this.getPages(row.name);
-
-            if (obj == null || pages == null)
-                return;
-
-            let name = row.name;
-            let origName = name;
-            let ix = 0;
-            const match = name.match(/\(\d+\)$/);
-            if (match) {
-                origName = name.slice(0, match.index)
-                ix = +match[0].slice(1, -1)
-            }
-
-            while (obj.versions.find(x => x.name === name)) {
-                ix++;
-                name = `${origName} (${ix})`;
-            }
-
-            const date = new Date();
-
-            obj.versions.push({
-                name,
-                created: date,
-                modified: date
-            });
-
-            await this.putPages(name, pages);
-            await this.putSiteObject(obj);
-
-            await this.loadSite();
-
-        },
-
-        open: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
-            const { row, i } = e.detail;
-            const obj = await this.getSiteObject();
-
-            if (obj == null)
-                return;
-
-            obj.devVersion = row.name;
-
-            await this.putSiteObject(obj);
-            await this.loadSite();
-            this.closeSettings();
-        },
-
-        delete: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
-            const { row, i } = e.detail;
-
-            const obj = await this.getSiteObject();
-
-            if (obj == null)
-                return;
-
-            obj.versions = obj.versions.filter(x => x.name !== row.name);
-
-            if (row.name === obj.devVersion)
-                obj.devVersion = '';
-
-            await this.deletePages(row.name);
-            await this.putSiteObject(obj);
-
-            await this.loadSite();
-        },
-
-        publish: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
-            const { row, i } = e.detail;
-            const obj = await this.getSiteObject();
-            if (obj == null)
-                return;
-            obj.publishedVersion = row.name;
-            if (obj.devVersion === obj.publishedVersion)
-                obj.devVersion = '';
-
-            await this.putSiteObject(obj);
-            await this.loadSite();
-        },
-
-        renameSite: async (e: CustomEvent<string>) => {
-            const newTitle = e.detail;
-            const obj = await this.getSiteObject();
-            if (obj == null)
-                return;
-            obj.siteTitle = newTitle;
-
-            await this.putSiteObject(obj);
-            await this.loadSite();
-        }
+    private _put_site_object(siteObject: SiteDatabaseObject) {
+        return db.putObject<SiteDatabaseObject>(`gal/${this.site_root}/site`, siteObject);
     }
 
     render() {
-        const { openPreview, pages, mobile, soMeLinks } = this;
-
-
-        if (this._isSettingsOpened) {
+        if (this._site_is_new) {
+            return html`<b-new-site .site_root=${this.site_root}></b-new-site>`;
+        }
+        if (this._is_settings_opened) {
             return html`
                 <b-settings
-                    @rename-site=${this.siteVersionsEventHandlers.renameSite}
-                    .siteDabaseObject=${this.sdo}
+                    @close-settings=${this._close_settings}
+                    @save-settings=${this._gem}
+                    .site_root=${this.site_root}
                 ></b-settings>
-                <button @click=${() => this.closeSettings()}> Luk indstillinger </button>
             `;
         }
 
-        const page = this._currentPage?.sub != null
-            ? this.pages[this._currentPage.page]?.subPages[this._currentPage.sub]
-            : this.pages[this._currentPage.page];
+        const page = this._current_page?.sub != null
+            ? this._pages[this._current_page.page]?.subPages[this._current_page.sub]
+            : this._pages[this._current_page.page];
 
         if (page == null)
-            return this.editting
+            return this._editting
                 ? html`
-                    <div class="buttons${mobile ? '-mobile' : ''}">
-                        <b-icon title="Rå" icon="code" @click=${this.openSettings}></b-icon>
+                    <div class="buttons${this._mobile ? '-mobile' : ''}">
+                        <b-icon title="Rå" icon="code" @click=${this._open_settings}></b-icon>
                     </div>
                 `
                 : nothing;
 
-        if (this.loading) {
+        if (this._loading) {
             return html`
-                <progress min="0" max="${this.loading.n}" value=${this.loading.i}></progress>
+                <progress min="0" max="${this._loading.n}" value=${this._loading.i}></progress>
             `
         }
 
         let pagePath: ObjPath<State, PageOrSubPage> =
-            this._currentPage.sub != null
-                ? stateM.path().at('pages').ix(this._currentPage.page).at('subPages').ix(this._currentPage.sub)
-                : stateM.path().at('pages').ix(this._currentPage.page);
+            this._current_page.sub != null
+                ? state_manager.path().at('pages').ix(this._current_page.page).at('subPages').ix(this._current_page.sub)
+                : state_manager.path().at('pages').ix(this._current_page.page);
 
         return html`
-            <b-image-preview .sdo=${this.sdo} .tile=${this.previewTile} @close-preview=${() => this.previewTileIndex = undefined} .editting=${this.editting} .mobile=${mobile} .viewport=${this._viewport}></b-image-preview>
+            <b-image-preview .sdo=${this._sdo} .tile=${this._preview_tile} @close-preview=${() => this._preview_tile_index = undefined} .editting=${this._editting} .mobile=${this._mobile} .viewport=${this._viewport}></b-image-preview>
             <div class="outer">
                 <div class="pages">
-                    ${mobile
-                ? html`<b-nav-mobile .pages=${pages} .soMeLinks=${soMeLinks} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav-mobile>`
+                    ${this._mobile
+                ? html`<b-nav-mobile .pages=${this._pages} .so_me_links=${this.so_me_links} .site_title=${this._sdo?.siteTitle ?? ''}></b-nav-mobile>`
                 : html`
-                            <b-nav .pages=${pages}  .soMeLinks=${soMeLinks} .editting=${this.editting} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav>
+                            <b-nav .pages=${this._pages}  .so_me_links=${this.so_me_links} .editting=${this._editting} .site_title=${this._sdo?.siteTitle ?? ''}></b-nav>
                         `
             }
                     <div class="page-wrapper">
-                        ${this._renderButtons()
-            }
+                        ${this._renderButtons()}
 
-                        <b-page .path=${pagePath} .mobile=${mobile} .page=${page} @open-preview=${openPreview} @b-set-loading=${this._setLoading} .editting=${this.editting} .viewport=${this._viewport}></b-page>
+                        <b-page .path=${pagePath} .mobile=${this._mobile} .page=${page} @open-preview=${this._open_preview} @b-set-loading=${this._set_loading} .editting=${this._editting} .viewport=${this._viewport}></b-page>
                     </div>
 
                     <div class="footer">
                         <hr>
                     </div>
-                    ${this._renderOverview()}
+                    ${this._render_overview()}
                 </div>
             </div>
         `;
     }
 
-    private _renderOverview() {
-        const { editting } = this;
-        if (!editting)
+    private _render_overview() {
+        if (!this._editting)
             return nothing;
         return html`
-            <b-overview .sdo=${this.sdo} .images=${this.images}></b-overview>
+            <b-overview .sdo=${this._sdo} .images=${this._images}></b-overview>
         `;
     }
 
     private _renderButtons() {
-        const { gem, startEditting, mobile, saving } = this;
 
         if (!location.search.includes('admin'))
             return nothing;
 
-        return mobile && !this.commingFromDesktop ? nothing
+        return this._mobile && !this._comming_from_desktop ? nothing
             : html`
-            <div class="buttons${mobile ? '-mobile' : ''}">
-                ${mobile
+            <div class="buttons${this._mobile ? '-mobile' : ''}">
+                ${this._mobile
                     ? nothing
-                    : this.editting
+                    : this._editting
                         ? html`
-                            <b-icon title="Bland billeder" @click=${this.shuffle} icon="shuffle"></b-icon>
-                            <b-icon title="Ny tekstboks" @click=${this.newTextBox} icon="edit-text"></b-icon>
-                            <b-icon title="Upload billede(r)" @file-change=${this.uploadImages} icon="file" file-input multiple accept="image/jpeg, image/png, image/jpg"></b-icon>
-                            <b-icon title="Indstillinger" @click=${this.openSettings} .disabled=${!this.canOpenSettings} icon="code"></b-icon>
-                            <b-icon title="Undo" @click=${this.undo} .disabled=${saving || !this.canUndo} icon="undo"></b-icon>
-                            <b-icon title="Redo" @click=${this.redo} .disabled=${saving || !this.canRedo} icon="redo"></b-icon>
-                            <b-icon title="Gem" @click=${gem} .disabled=${saving || !this.canSave} icon="save"></b-icon>
-                            <b-icon title="Kaser ændringer" @click=${this.stopEditting} icon="close"></b-icon>
+                            <b-icon title="Bland billeder" @click=${this._shuffle} icon="shuffle"></b-icon>
+                            <b-icon title="Ny tekstboks" @click=${this._new_text_box} icon="edit-text"></b-icon>
+                            <b-icon title="Upload billede(r)" @file-change=${this._upload_images} icon="file" file-input multiple accept="image/jpeg, image/png, image/jpg"></b-icon>
+                            <b-icon title="Indstillinger" @click=${this._open_settings} .disabled=${!this._can_open_settings} icon="code"></b-icon>
+                            <b-icon title="Undo" @click=${this._undo} .disabled=${this._saving || !this._can_undo} icon="undo"></b-icon>
+                            <b-icon title="Redo" @click=${this._redo} .disabled=${this._saving || !this._can_redo} icon="redo"></b-icon>
+                            <b-icon title="Gem" @click=${this._gem} .disabled=${this._saving || !this._can_save} icon="save"></b-icon>
+                            <b-icon title="Kaser ændringer" @click=${this._stop_editting} icon="close"></b-icon>
                         `
-                        : html`<b-icon title="Rediger" @click=${startEditting} icon="admin"></b-icon>`
+                        : html`<b-icon title="Rediger" @click=${this._start_editting} icon="admin"></b-icon>`
                 }
-                ${this.mobile
+                ${this._mobile
                     ? html`
-                        <b-icon title="Mobil" @click=${this.toggleMobile} icon="mobile"></b-icon>
+                        <b-icon title="Mobil" @click=${this._toggle_mobile} icon="mobile"></b-icon>
                     `
                     : html`
-                        <b-icon title="Desktop" @click=${this.toggleMobile} icon="desktop"></b-icon>
+                        <b-icon title="Desktop" @click=${this._toggle_mobile} icon="desktop"></b-icon>
 
                     `}
             </div>

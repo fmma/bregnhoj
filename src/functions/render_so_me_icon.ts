@@ -1,15 +1,15 @@
 import { html } from "lit";
-import { SoMeLink } from "../components/Types";
+import { SoMeLink } from "../types";
 
-export function renderSoMeIcon(soMe: SoMeLink) {
-    const url = soMeUrl(soMe)
+export function render_so_me_icon(so_me: SoMeLink) {
+    const url = so_me_url(so_me)
     return html`
-        <a href="${url}" class="fa-brands fa-${soMe.name}"></a>
+        <a href="${url}" class="fa-brands fa-${so_me.name}"></a>
     `;
 }
 
-function soMeUrl(soMe: SoMeLink) {
-    switch(soMe.name) {
+function so_me_url(soMe: SoMeLink) {
+    switch (soMe.name) {
         case "instagram": return `https://instagram.com/_u/${soMe.user}/`
         case "facebook": return `https://facebook.com/${soMe.user}/`
         case "flickr": return `https://flickr.com/${soMe.user}/`

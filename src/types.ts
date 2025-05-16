@@ -49,7 +49,7 @@ export interface SiteDatabaseObject {
     soMeLinks?: SoMeLink[]
 }
 
-export const socialMediaNames = [
+export const SOCIAL_MEDIA_NAMES = [
     'facebook',
     'x-twitter',
     'instagram',
@@ -61,7 +61,7 @@ export const socialMediaNames = [
     'tiktok',
 ] as const
 
-export type SoMeName = (typeof socialMediaNames)[number];
+export type SoMeName = (typeof SOCIAL_MEDIA_NAMES)[number];
 
 export interface SoMeLink {
     name: SoMeName
@@ -69,10 +69,11 @@ export interface SoMeLink {
 }
 
 export interface Sites {
-    sites: {name: string}[];
+    sites: { name: string }[];
 }
 
 export interface SiteVersion {
+    readable_name?: string;
     name: string;
     created: Date;
     modified: Date;
@@ -85,8 +86,6 @@ export interface Page {
 }
 
 export type PageOrSubPage = SubPage | Page;
-
-
 
 export type Viewport = {
     width: number;

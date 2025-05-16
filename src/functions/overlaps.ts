@@ -1,4 +1,4 @@
-import type { Rect } from "../components/Types";
+import type { Rect } from "../types";
 
 export function overlaps(a: Rect, b: Rect) {
 
@@ -16,5 +16,5 @@ export function overlaps(a: Rect, b: Rect) {
     const aRightOfB = minAx > maxBx;
     const aAboveB = minAy > maxBy;
     const aBelowB = maxAy < minBy;
-    return !( aLeftOfB || aRightOfB || aAboveB || aBelowB );
+    return !(aLeftOfB || aRightOfB || aAboveB || aBelowB);
 }

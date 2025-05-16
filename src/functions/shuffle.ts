@@ -1,17 +1,11 @@
-export function shuffle<T>(array: T[]): T[] {
-    let currentIndex = array.length,  randomIndex;
-
-    // While there remain elements to shuffle.
-    while (currentIndex != 0) {
-
-      // Pick a remaining element.
-      randomIndex = Math.floor(Math.random() * currentIndex);
-      currentIndex--;
-
-      // And swap it with the current element.
-      [array[currentIndex], array[randomIndex]] = [
-        array[randomIndex], array[currentIndex]];
+export function shuffle<T>(list: T[]): T[] {
+    let i = list.length;
+    while (i != 0) {
+        const j = Math.floor(Math.random() * i);
+        i--;
+        const tmp = list[i];
+        list[i] = list[j];
+        list[j] = tmp;
     }
-
-    return array;
-  }
+    return list;
+}

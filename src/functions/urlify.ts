@@ -1,18 +1,18 @@
-import type { Page } from "../components/Types";
+import type { Page } from "../types";
 
 export function urlify(pages: Page[], title: string, subtitle?: string) {
-    if(subtitle == null)
-        return urlEncode(title)
+    if (subtitle == null)
+        return url_encode(title)
     else {
-        const urlified = urlEncode(subtitle);
-        if(pages.some(p => p.title !== title && p.subPages.some(sp => urlEncode(sp.title) === urlified)))
-            return urlEncode(title) + urlified;
+        const urlified = url_encode(subtitle);
+        if (pages.some(p => p.title !== title && p.subPages.some(sp => url_encode(sp.title) === urlified)))
+            return url_encode(title) + urlified;
 
         return urlified;
     }
 }
 
-export function urlEncode(title: string) {
+export function url_encode(title: string) {
     return title
         .replaceAll('æ', 'a')
         .replaceAll('ø', 'o')
