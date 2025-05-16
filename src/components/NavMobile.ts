@@ -1,13 +1,15 @@
-import { css, html, LitElement } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { render_so_me_icon } from "../functions/render_so_me_icon";
 import { urlify } from "../functions/urlify";
 import { Page, SoMeLink, SubPage } from "../types";
-import { render_so_me_icon } from "../functions/render_so_me_icon";
 
 let counter = 0;
 
 @customElement('b-nav-mobile')
 export class BnavMobile extends LitElement {
+
+    renderRoot = this;
 
     constructor() {
         super();
@@ -16,38 +18,35 @@ export class BnavMobile extends LitElement {
 
     private _id = 0;
 
-    renderRoot = this;
-
-    @property({type: String})
-    siteTitle: string = '';
+    @property({ type: String })
+    site_title: string = '';
 
     @property({ type: Array })
     pages!: Page[];
-    
-    @property({type: Array})
-    soMeLinks!: SoMeLink[]
 
-    closeMenu = () => {
+    @property({ type: Array })
+    so_me_links!: SoMeLink[]
+
+    private _close_menu = () => {
         const checkbox = this.querySelector('#mmenu-side-menu' + this._id) as HTMLInputElement;
         checkbox.checked = false;
     }
 
-
-    renderSubMenuItem = (p: Page, sp: SubPage, i: number, j: number | undefined) => {
+    private _render_sub_menu_item = (p: Page, sp: SubPage, i: number, j: number | undefined) => {
         return html`
-            <a href="#${urlify(this.pages, p.title, sp.title)}" @click=${this.closeMenu}>${sp.title}</a>
+            <a href="#${urlify(this.pages, p.title, sp.title)}" @click=${this._close_menu}>${sp.title}</a>
         `
     }
 
-    renderMenuItem = (p: Page, i: number) => {
-        const { renderSubMenuItem } = this;
-        if(p.subPages.length === 0)
+    private _render_menu_item = (p: Page, i: number) => {
+        const { _render_sub_menu_item: renderSubMenuItem } = this;
+        if (p.subPages.length === 0)
             return html`
-                <li><a href="#${urlify(this.pages, p.title)}" @click=${this.closeMenu}>${p.title}</a></li>
+                <li><a href="#${urlify(this.pages, p.title)}" @click=${this._close_menu}>${p.title}</a></li>
             `;
         return html`
             <li class="mmenu-subnav">
-                <span class="mmenu-subnavbtn"><a href="#${urlify(this.pages, p.title)}" @click=${this.closeMenu}>${p.title}</a></span>
+                <span class="mmenu-subnavbtn"><a href="#${urlify(this.pages, p.title)}" @click=${this._close_menu}>${p.title}</a></span>
                 <div class="mmenu-subnav-content">
                     ${p.subPages.map((sp, j) => renderSubMenuItem(p, sp, i, j))}
                 </div>
@@ -56,12 +55,12 @@ export class BnavMobile extends LitElement {
     }
 
     render() {
-        const { pages, renderMenuItem } = this;
+        const { pages, _render_menu_item: renderMenuItem } = this;
         return html`
             <header class="mmenu-header">
-                <a href="" class="mmenu-logo">${this.siteTitle}</a>
+                <a href="" class="mmenu-logo">${this.site_title}</a>
                 <input class="mmenu-side-menu" type="checkbox" id="mmenu-side-menu${this._id}" />
-                ${this.soMeLinks.map(soMeLink => soMeLink.user && html`
+                ${this.so_me_links.map(soMeLink => soMeLink.user && html`
                         ${render_so_me_icon(soMeLink)}
                 `)}
                 <label class="mmenu-hamb" for="mmenu-side-menu${this._id}"><span class="mmenu-hamb-line"></span></label>
@@ -71,6 +70,6 @@ export class BnavMobile extends LitElement {
                     </ul>
                 </nav>
             </header>
-        `
+        `;
     }
 }

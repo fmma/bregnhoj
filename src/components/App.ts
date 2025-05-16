@@ -2,9 +2,9 @@ import { configure, db, media } from '@fmma-npm/http-client';
 import { ObjPath } from '@fmma-npm/state';
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { defaultHeight, defaultHeightDouble, defaultHeightHalf, defaultWidth } from '../constants';
+import { DEFAULT_HEIGHT, DEFAULT_HEIGHT_DOUBLE, DEFAULT_HEIGHT_HALF, DEFAULT_WIDTH, API_HOST } from '../constants';
 import { get_rect } from '../functions/get_rect';
-import { getViewport } from '../functions/get_width';
+import { get_viewport } from '../functions/get_width';
 import { is_mobile } from '../functions/is_mobile';
 import { read_file } from '../functions/read_file';
 import { shuffle_iteration } from '../functions/shuffle_iteration';
@@ -12,12 +12,10 @@ import { snap } from '../functions/snap';
 import { urlify } from '../functions/urlify';
 import { State, state_manager } from '../state_manager';
 import type { Expanse, Image, Page, PageOrSubPage, Rect, SiteDatabaseObject, SiteVersion, SubPage, Tile } from '../types';
-import "./AreaSelect";
 import './Icon';
 import './ImagePreview';
 import './Nav';
 import './NavMobile';
-import './NewTiles';
 import './Overview';
 import './Page';
 import type { Bpage } from './Page';
@@ -26,7 +24,7 @@ import './TextEditor';
 import './Tile';
 
 configure({
-    host: 'https://snesl.dk'
+    host: API_HOST
 });
 
 @customElement('b-app')
@@ -65,7 +63,7 @@ export class Bapp extends LitElement {
     private _comming_from_desktop = false;
 
     @state()
-    private _viewport = getViewport();
+    private _viewport = get_viewport();
 
     @state()
     private _current_page: { page: number, sub?: number } = { page: 0 };
@@ -182,7 +180,7 @@ export class Bapp extends LitElement {
             e.preventDefault();
             const currentPage = this.querySelector('b-page') as Bpage | undefined;
             if (currentPage != null) {
-                currentPage.activeTiles = currentPage.tiles.map((_, i) => i);
+                currentPage.active_tiles = currentPage.tiles.map((_, i) => i);
             }
         }
         else if (e.key === 'z' && e.ctrlKey) {
@@ -196,7 +194,7 @@ export class Bapp extends LitElement {
     }
 
     private _resize = (e: Event) => {
-        const newViewport = getViewport();
+        const newViewport = get_viewport();
         if (newViewport.pixelRatio === this._viewport.pixelRatio && newViewport.width === this._viewport.width)
             return;
 
@@ -245,7 +243,7 @@ export class Bapp extends LitElement {
     }
 
     private _new_text_box = () => {
-        const e: Expanse = { w: defaultWidth, h: defaultHeight }
+        const e: Expanse = { w: DEFAULT_WIDTH, h: DEFAULT_HEIGHT }
 
         if (this._current_page.sub != null) {
             const subPage = this._pages[this._current_page.page].subPages[this._current_page.sub];
@@ -269,7 +267,6 @@ export class Bapp extends LitElement {
                 }
             })
         }
-
     }
 
     private _shuffle = () => {
@@ -305,14 +302,14 @@ export class Bapp extends LitElement {
         for (const f of e.detail) {
             const { compressed, uncompressed, thumbnail, w, h, ogw, ogh } = await read_file(f);
 
-            let scale = defaultHeight / h;
+            let scale = DEFAULT_HEIGHT / h;
             let e: Expanse = { w: snap(w * scale), h: snap(h * scale) }
-            if (e.w * e.h < defaultHeight * defaultHeight * 0.6) {
-                let scale = defaultHeightDouble / h;
+            if (e.w * e.h < DEFAULT_HEIGHT * DEFAULT_HEIGHT * 0.6) {
+                let scale = DEFAULT_HEIGHT_DOUBLE / h;
                 e = { w: snap(w * scale), h: snap(h * scale) }
             }
-            else if (e.w * e.h > defaultHeight * defaultHeight * 2) {
-                let scale = defaultHeightHalf / h;
+            else if (e.w * e.h > DEFAULT_HEIGHT * DEFAULT_HEIGHT * 2) {
+                let scale = DEFAULT_HEIGHT_HALF / h;
                 e = { w: snap(w * scale), h: snap(h * scale) }
             }
 
@@ -635,12 +632,12 @@ export class Bapp extends LitElement {
             await this._load_site();
         },
 
-        renameSite: async (e: CustomEvent<string>) => {
-            const newTitle = e.detail;
+        rename_site: async (e: CustomEvent<string>) => {
+            const new_title = e.detail;
             const obj = await this._get_site_object();
             if (obj == null)
                 return;
-            obj.siteTitle = newTitle;
+            obj.siteTitle = new_title;
 
             await this._put_site_object(obj);
             await this._load_site();
@@ -648,13 +645,11 @@ export class Bapp extends LitElement {
     }
 
     render() {
-        const { _open_preview, _pages: pages, _mobile: mobile, so_me_links: soMeLinks } = this;
-
         if (this._is_settings_opened) {
             return html`
                 <b-settings
-                    @rename-site=${this._site_versions_event_handlers.renameSite}
-                    .siteDabaseObject=${this._sdo}
+                    @rename-site=${this._site_versions_event_handlers.rename_site}
+                    .sdo=${this._sdo}
                 ></b-settings>
                 <button @click=${() => this._close_settings()}> Luk indstillinger </button>
             `;
@@ -667,7 +662,7 @@ export class Bapp extends LitElement {
         if (page == null)
             return this._editting
                 ? html`
-                    <div class="buttons${mobile ? '-mobile' : ''}">
+                    <div class="buttons${this._mobile ? '-mobile' : ''}">
                         <b-icon title="Rå" icon="code" @click=${this._open_settings}></b-icon>
                     </div>
                 `
@@ -685,20 +680,20 @@ export class Bapp extends LitElement {
                 : state_manager.path().at('pages').ix(this._current_page.page);
 
         return html`
-            <b-image-preview .sdo=${this._sdo} .tile=${this._preview_tile} @close-preview=${() => this._preview_tile_index = undefined} .editting=${this._editting} .mobile=${mobile} .viewport=${this._viewport}></b-image-preview>
+            <b-image-preview .sdo=${this._sdo} .tile=${this._preview_tile} @close-preview=${() => this._preview_tile_index = undefined} .editting=${this._editting} .mobile=${this._mobile} .viewport=${this._viewport}></b-image-preview>
             <div class="outer">
                 <div class="pages">
-                    ${mobile
-                ? html`<b-nav-mobile .pages=${pages} .soMeLinks=${soMeLinks} .siteTitle=${this._sdo?.siteTitle ?? ''}></b-nav-mobile>`
+                    ${this._mobile
+                ? html`<b-nav-mobile .pages=${this._pages} .so_me_links=${this.so_me_links} .site_title=${this._sdo?.siteTitle ?? ''}></b-nav-mobile>`
                 : html`
-                            <b-nav .pages=${pages}  .soMeLinks=${soMeLinks} .editting=${this._editting} .siteTitle=${this._sdo?.siteTitle ?? ''}></b-nav>
+                            <b-nav .pages=${this._pages}  .so_me_links=${this.so_me_links} .editting=${this._editting} .site_title=${this._sdo?.siteTitle ?? ''}></b-nav>
                         `
             }
                     <div class="page-wrapper">
                         ${this._renderButtons()
             }
 
-                        <b-page .path=${pagePath} .mobile=${mobile} .page=${page} @open-preview=${_open_preview} @b-set-loading=${this._set_loading} .editting=${this._editting} .viewport=${this._viewport}></b-page>
+                        <b-page .path=${pagePath} .mobile=${this._mobile} .page=${page} @open-preview=${this._open_preview} @b-set-loading=${this._set_loading} .editting=${this._editting} .viewport=${this._viewport}></b-page>
                     </div>
 
                     <div class="footer">

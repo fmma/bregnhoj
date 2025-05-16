@@ -1,5 +1,5 @@
-import { mobileBreakpoint } from "../constants";
+import { MOBILE_BREAKPOINT } from "../constants";
 
 export function is_mobile() {
-    return window.innerWidth < mobileBreakpoint;
+    return window.innerWidth < MOBILE_BREAKPOINT;
 }

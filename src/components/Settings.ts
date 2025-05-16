@@ -1,9 +1,9 @@
 import '@fmma-npm/wc-table';
 import type { Field } from '@fmma-npm/wc-table';
-import { html, LitElement, nothing } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { socialMediaNames, SiteDatabaseObject, SoMeLink } from "../types";
 import { state_manager } from '../state_manager';
+import { SiteDatabaseObject, socialMediaNames, SoMeLink } from "../types";
 
 
 @customElement('b-settings')
@@ -12,19 +12,19 @@ export class Bsettings extends LitElement {
     renderRoot: HTMLElement | ShadowRoot = this;
 
     @property()
-    siteDabaseObject?: SiteDatabaseObject;
+    sdo?: SiteDatabaseObject;
 
-    get rows(): SoMeLink[] {
-        const list = this.siteDabaseObject?.soMeLinks ?? [];
-        for(const soMeName of socialMediaNames) {
-            if(!list.find(x => x.name == soMeName)) {
-                list.push({name: soMeName, user: ''})
+    private get _rows(): SoMeLink[] {
+        const list = this.sdo?.soMeLinks ?? [];
+        for (const soMeName of socialMediaNames) {
+            if (!list.find(x => x.name == soMeName)) {
+                list.push({ name: soMeName, user: '' })
             }
         }
         return list;
     }
 
-    get fields(): Field<SoMeLink>[] {
+    private get _fields(): Field<SoMeLink>[] {
         return [
             {
                 field: 'name',
@@ -35,7 +35,7 @@ export class Bsettings extends LitElement {
                 title: 'Bruger',
                 renderEdit: r => {
                     const change = (e: any) => {
-                        const rows = this.rows;
+                        const rows = this._rows;
                         const newValue = e.target.value || '';
                         rows.find(x => x.name === r.name)!.user = newValue;
                         const rowsFiltered = rows.filter(x => {
@@ -52,7 +52,7 @@ export class Bsettings extends LitElement {
         ]
     }
 
-    renameSite = (e: any) => {        
+    private _rename_site = (e: any) => {
         state_manager.patch(state_manager.path().at('sdo').at('siteTitle').patch(e.target.value));
     }
 
@@ -61,10 +61,10 @@ export class Bsettings extends LitElement {
             <h1>
                 Versioner
             </h1>
-            <p>Sidens navn <input .value=${this.siteDabaseObject?.siteTitle ?? ''} @change=${this.renameSite}></p>
+            <p>Sidens navn <input .value=${this.sdo?.siteTitle ?? ''} @change=${this._rename_site}></p>
             <fmma-table
-                .rows=${this.rows}
-                .fields=${this.fields}
+                .rows=${this._rows}
+                .fields=${this._fields}
             ></fmma-table>
         `;
     }

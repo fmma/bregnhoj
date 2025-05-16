@@ -1,4 +1,4 @@
-import { defaultHeight, defaultHeightHalf, margin } from "../constants";
+import { DEFAULT_HEIGHT, DEFAULT_HEIGHT_HALF, MARGIN } from "../constants";
 import { Expanse, Rect, Tile } from "../types";
 import { overlaps } from "./overlaps";
 
@@ -6,10 +6,10 @@ import { overlaps } from "./overlaps";
 export function get_rect(e: Expanse, tiles: Tile[]): Rect {
     const r = { ...e, x: 0, y: 0 };
     let swazzle = true;
-    for (let y = 1; ; y += defaultHeight + 1) {
+    for (let y = 1; ; y += DEFAULT_HEIGHT + 1) {
         swazzle = !swazzle;
         if (swazzle) {
-            for (let x = 100 - e.w - 2 - margin; x >= 1 + margin; --x) {
+            for (let x = 100 - e.w - 2 - MARGIN; x >= 1 + MARGIN; --x) {
                 r.x = x;
                 r.y = y;
                 let o = false;
@@ -20,7 +20,7 @@ export function get_rect(e: Expanse, tiles: Tile[]): Rect {
                 if (!o)
                     return r;
                 o = false;
-                r.y += defaultHeightHalf + 1;
+                r.y += DEFAULT_HEIGHT_HALF + 1;
                 for (const t of tiles) {
                     if (overlaps(r, t.rect))
                         o = true;
@@ -30,7 +30,7 @@ export function get_rect(e: Expanse, tiles: Tile[]): Rect {
             }
         }
         else {
-            for (let x = 1 + margin; x < 100 - e.w - 1 - margin; ++x) {
+            for (let x = 1 + MARGIN; x < 100 - e.w - 1 - MARGIN; ++x) {
                 r.x = x;
                 r.y = y;
                 let o = false;
@@ -41,7 +41,7 @@ export function get_rect(e: Expanse, tiles: Tile[]): Rect {
                 if (!o)
                     return r;
                 o = false;
-                r.y += defaultHeightHalf + 1;
+                r.y += DEFAULT_HEIGHT_HALF + 1;
                 for (const t of tiles) {
                     if (overlaps(r, t.rect))
                         o = true;

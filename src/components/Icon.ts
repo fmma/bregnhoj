@@ -1,4 +1,4 @@
-import { css, html, LitElement } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 @customElement('b-icon')
@@ -10,7 +10,7 @@ export class Bicon extends LitElement {
     icon?: 'left' | 'right' | 'delete' | 'edit' | 'add' | 'menu' | 'file' | 'edit-caption'| 'edit-text' | 'close' | 'save' | 'admin' | 'mobile' | 'desktop' | 'undo' | 'redo' | 'folder-tree' | 'meteor' | 'shuffle' | 'grow' | 'code';
 
     @property({ type: Boolean, attribute: 'file-input' })
-    fileInput = false;
+    file_input = false;
 
     @property({type: String})
     accept = '';
@@ -21,9 +21,8 @@ export class Bicon extends LitElement {
     @property({type: Boolean})
     disabled = false;
 
-    getIconClass() {
-        const { icon } = this;
-        switch (icon) {
+    private _get_icon_class() {
+        switch (this.icon) {
             case 'delete': return 'fa-solid fa-trash';
             case 'edit': return 'fa-solid fa-edit';
             case 'edit-caption': return 'fa-solid fa-comment-dots';
@@ -49,28 +48,26 @@ export class Bicon extends LitElement {
         }
     }
 
-    getIconText() {
-        const { icon } = this;
-        switch (icon) {
+    private _get_icon_text() {
+        switch (this.icon) {
             case 'menu': return '☰';
             default: return '';
         }
     }
 
-    fileChange = (e: Event) => {
-        const fileInput = e.composedPath()[0] as HTMLInputElement;
-        this.dispatchEvent(new CustomEvent('file-change', {detail: [...fileInput.files ?? []]}));
+    private _file_change = (e: Event) => {
+        const file_input = e.composedPath()[0] as HTMLInputElement;
+        this.dispatchEvent(new CustomEvent('file-change', {detail: [...file_input.files ?? []]}));
     }
 
     render() {
-        const { fileInput, accept, multiple, fileChange } = this;
-        if (fileInput)
+        if (this.file_input)
             return html`
             <label class="icon ${this.disabled ? '' : 'cursor-pointer'}">
-                <span class="icon-label ${this.getIconClass()}">${this.getIconText()}</span>
-                <input class="icon-input" type="file" accept=${accept} ?multiple=${multiple} @change=${fileChange}>
+                <span class="icon-label ${this._get_icon_class()}">${this._get_icon_text()}</span>
+                <input class="icon-input" type="file" accept=${this.accept} ?multiple=${this.multiple} @change=${this._file_change}>
             </label>
             `
-        return html`<button ?disabled=${this.disabled} class="icon icon-label ${this.getIconClass()} ${this.disabled ? '' : 'cursor-pointer'}">${this.getIconText()}</button>`;
+        return html`<button ?disabled=${this.disabled} class="icon icon-label ${this._get_icon_class()} ${this.disabled ? '' : 'cursor-pointer'}">${this._get_icon_text()}</button>`;
     }
 }

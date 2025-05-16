@@ -1,4 +1,4 @@
-import { defaultHeight, defaultHeightDouble, defaultHeightHalf, margin } from "../constants";
+import { DEFAULT_HEIGHT, DEFAULT_HEIGHT_DOUBLE, DEFAULT_HEIGHT_HALF, MARGIN } from "../constants";
 import { Expanse, Rect, Tile } from "../types";
 import { get_rect } from "./get_rect";
 import { overlaps } from "./overlaps";
@@ -16,14 +16,14 @@ export function shuffle_iteration(tiles: Tile[]) {
         const { w, h } = tile.image;
 
         const magicNumber = Math.random() < 0.2 ? 2 : 1;
-        let scale = magicNumber * defaultHeight / h;
+        let scale = magicNumber * DEFAULT_HEIGHT / h;
         let e: Expanse = { w: snap(w * scale), h: snap(h * scale) }
-        if (e.w * e.h < defaultHeight * defaultHeight * 0.6) {
-            let scale = defaultHeightDouble / h;
+        if (e.w * e.h < DEFAULT_HEIGHT * DEFAULT_HEIGHT * 0.6) {
+            let scale = DEFAULT_HEIGHT_DOUBLE / h;
             e = { w: snap(w * scale), h: snap(h * scale) }
         }
-        else if (e.w * e.h > defaultHeight * defaultHeight * 5) {
-            let scale = defaultHeightHalf / h;
+        else if (e.w * e.h > DEFAULT_HEIGHT * DEFAULT_HEIGHT * 5) {
+            let scale = DEFAULT_HEIGHT_HALF / h;
             e = { w: snap(w * scale), h: snap(h * scale) }
         }
 
@@ -44,7 +44,7 @@ export function shuffle_iteration(tiles: Tile[]) {
     const find_inner_tile = () => {
         const maxH = get_max_h();
 
-        for (let x = margin; x < 100 - 2 - margin; ++x) {
+        for (let x = MARGIN; x < 100 - 2 - MARGIN; ++x) {
             for (let y = 1; y < maxH; ++y) {
                 const r = { x, y, w: 3, h: 3 };
                 if (is_free(r)) {
@@ -57,7 +57,7 @@ export function shuffle_iteration(tiles: Tile[]) {
 
     const expand_tile_inplace = (r: Rect, t?: Tile) => {
         const maxH = get_max_h();
-        while (r.x > 1 + margin) {
+        while (r.x > 1 + MARGIN) {
             r.x -= 1;
             r.w += 1;
             if (is_free(r, t)) {
@@ -70,7 +70,7 @@ export function shuffle_iteration(tiles: Tile[]) {
             }
         }
 
-        while (r.x + r.w < 100 - 2 - margin) {
+        while (r.x + r.w < 100 - 2 - MARGIN) {
             r.w += 1;
             if (is_free(r, t)) {
                 //ok
@@ -104,11 +104,11 @@ export function shuffle_iteration(tiles: Tile[]) {
         for (const t of newTiles) {
             if (t.image) {
 
-                const {ogw, ogh} = t.image;
-                const {w, h} = t.rect;
+                const { ogw, ogh } = t.image;
+                const { w, h } = t.rect;
                 let og_ar = ogw / ogh;
                 let rect_ar = w / h;
-                let [w1, h1] =  og_ar >= rect_ar ? [w, w / og_ar] : [h * og_ar, h];
+                let [w1, h1] = og_ar >= rect_ar ? [w, w / og_ar] : [h * og_ar, h];
                 let s = w1 / ogw;
 
                 badness = Math.max(badness, s * s * (w - w1) * (w - w1) + s * s * (h - h1) * (h - h1));

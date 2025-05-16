@@ -1,19 +1,23 @@
 import { html, LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { getHeight, getWidth } from '../functions/get_width';
-import './Icon';
+import { IMG_URL_PREFIX } from '../constants';
+import { get_height } from '../functions/get_width';
 import type { Tile } from '../types';
-
-const serverUrlPrefix = 'https://snesl.dk/media/';
+import './Icon';
 
 let counter = 0;
 
 @customElement('b-tile-mobile')
 export class BtileMobile extends LitElement {
 
-    @property({type: Number})
+    renderRoot = this;
+
+    @property({ type: Number })
     width = 0;
+
+    @property({ type: Object })
+    tile!: Tile;
 
     private _id;
 
@@ -22,29 +26,24 @@ export class BtileMobile extends LitElement {
         this._id = counter++;
     }
 
-    renderRoot = this;
-
-    @property({ type: Object })
-    tile!: Tile;
-
     render() {
         return html`
             <div class="mtile-wrapper">
-                ${this.renderTile()}
+                ${this._render_tile()}
             </div>
         `;
     }
 
-    clickImg = (e: MouseEvent) => {
-        if((e.composedPath()[0] as Element).tagName !== 'A' && this.tile.image != null)
+    private _click_img = (e: MouseEvent) => {
+        if ((e.composedPath()[0] as Element).tagName !== 'A' && this.tile.image != null)
             this.dispatchEvent(new CustomEvent('open-preview'));
     }
 
-    renderTile() {
+    private _render_tile() {
         const { tile } = this;
 
         const w = this.width;
-        const h = getHeight();
+        const h = get_height();
 
         const k1 = w / tile.image?.ogw! * 0.8;
         const k2 = h / tile.image?.ogh! * 0.8;
@@ -57,21 +56,21 @@ export class BtileMobile extends LitElement {
         const img = tile.image == null
             ? html`<div style="width:${width}px; height:${height}px"></div>`
             : html`
-                <img src=${`${serverUrlPrefix}${tile.image?.url}`} width=${width} height=${height} loading="lazy">
+                <img src=${`${IMG_URL_PREFIX}${tile.image?.url}`} width=${width} height=${height} loading="lazy">
             `;
 
         const style = html`
             <style>
                 .tile-text${this._id} h1 {
-                    font: normal normal ${3*vw}vw 'Capture it';
+                    font: normal normal ${3 * vw}vw 'Capture it';
                 }
 
                 .tile-text${this._id} h2 {
-                    font: normal normal ${2*vw}vw 'Capture it';
+                    font: normal normal ${2 * vw}vw 'Capture it';
                 }
 
                 .tile-text${this._id} h3 {
-                    font: normal normal ${2*vw}vw 'Open Sans',Arial,sans-serif;
+                    font: normal normal ${2 * vw}vw 'Open Sans',Arial,sans-serif;
                 }
 
                 .tile-text${this._id} p {
@@ -81,7 +80,7 @@ export class BtileMobile extends LitElement {
         `;
 
         return html`
-            <div class="mtile-wrapper tile-text${this._id}" @click=${this.clickImg}>
+            <div class="mtile-wrapper tile-text${this._id}" @click=${this._click_img}>
                 ${tile.image == null
                 ? html`
                     <div class="mtile-text-contents-no-img">
@@ -89,10 +88,10 @@ export class BtileMobile extends LitElement {
                     </div>
                 `
                 : tile.textBlock == null
-                ? html`
+                    ? html`
                     ${img}
                 `
-                : html`
+                    : html`
                     ${img}
                     <div class="mtile-text-contents">
                         ${style}

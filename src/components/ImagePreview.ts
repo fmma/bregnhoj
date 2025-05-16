@@ -1,14 +1,15 @@
 import { html, LitElement, nothing } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { serverUrlPrefix } from "../constants";
-import { getHeight } from '../functions/get_width';
-import './Icon';
+import { customElement, property } from "lit/decorators.js";
+import { IMG_URL_PREFIX } from "../constants";
 import type { SiteDatabaseObject, Tile, Viewport } from "../types";
+import './Icon';
 
 @customElement('b-image-preview')
 export class BimagePreview extends LitElement {
 
-    @property({type: Object})
+    renderRoot = this;
+
+    @property({ type: Object })
     sdo?: SiteDatabaseObject;
 
     @property({ type: Object })
@@ -20,65 +21,49 @@ export class BimagePreview extends LitElement {
     @property({ type: Object })
     tile?: Tile
 
-    @state()
-    hideCaption = false;
-
-    width = 0;
-    height = 0;
+    private _width = 0;
+    private _height = 0;
 
     update(changed: Map<keyof this, any>) {
         if (changed.has('tile')) {
-            this.hideCaption = false;
             if (this.tile == null) {
                 document.body.style.overflowY = "auto"
-                // disableScroll.off();
             }
             else {
-
                 document.body.style.overflowY = "hidden"
-                // disableScroll.on();
-
                 const w = this.viewport.width;
-                const h = getHeight();
-                const fitSize = this.mobile ? 0.9 : 0.9;
+                const fit_size = this.mobile ? 0.9 : 0.9;
 
                 if (this.tile.image?.ogw) {
-                    const c = w / this.tile.image.ogw * fitSize;
-                    this.width = c * this.tile.image.ogw;
-                    this.height = c * this.tile.image.ogh
+                    const c = w / this.tile.image.ogw * fit_size;
+                    this._width = c * this.tile.image.ogw;
+                    this._height = c * this.tile.image.ogh
                 }
                 else {
                     const c1 = w / this.tile.rect.w;
-
-
-
-                    const k1 = c1 * fitSize;
+                    const k1 = c1 * fit_size;
                     const k = k1;
-
-                    this.width = k * this.tile.rect.w
-                    this.height = k * this.tile.rect.h;
+                    this._width = k * this.tile.rect.w
+                    this._height = k * this.tile.rect.h;
                 }
             }
         }
         super.update(changed);
     }
 
-    clickPreview = () => {
+    private _click_preview = () => {
         //if(this.mobile)
         //    this.hideCaption = true;
     }
 
-    renderRoot = this;
-
-
-    clicked = (e: Event) => {
+    private _clicked = (e: Event) => {
         const target = e.composedPath()[0] as HTMLElement;
         if (target.classList.contains('image-preview-wrapper') || target.tagName === 'IMG') {
-            this.closeAndSave();
+            this._close_and_save();
         }
     }
 
-    closeAndSave() {
+    private _close_and_save() {
         this.dispatchEvent(new CustomEvent('close-preview'));
     }
 
@@ -99,22 +84,22 @@ export class BimagePreview extends LitElement {
             <div style="white-space: pre-wrap;">${metadata?.description}
 
 </div>
-            <button class="link-button" @click=${() => this.closeAndSave()}>Tilbage</button>
+            <button class="link-button" @click=${() => this._close_and_save()}>Tilbage</button>
             </div>
         `;
 
         const caption = metadata == null ? nothing : html`
-            <div class="image-preview-caption${this.mobile ? '-mobile' : ''}" @click=${this.clickPreview}>
+            <div class="image-preview-caption${this.mobile ? '-mobile' : ''}" @click=${this._click_preview}>
                 ${textarea}
             </div>
         `;
 
         return html`
-            <div class="image-preview-wrapper" @click=${this.clicked}>
+            <div class="image-preview-wrapper" @click=${this._clicked}>
                 ${caption}
                 <div class="image-preview-image">
-                    <img src="${this.tile.image?.isNew ? this.tile.image.bigurl.slice(4, -1) : `${serverUrlPrefix}${this.tile?.image?.bigurl ?? this.tile?.image?.url}`}"
-                       width="${this.width}px" height="${this.height}px" >
+                    <img src="${this.tile.image?.isNew ? this.tile.image.bigurl.slice(4, -1) : `${IMG_URL_PREFIX}${this.tile?.image?.bigurl ?? this.tile?.image?.url}`}"
+                       width="${this._width}px" height="${this._height}px" >
                 </div>
             </div>
         `
