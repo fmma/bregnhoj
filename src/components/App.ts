@@ -2,7 +2,7 @@ import { configure, db, media } from '@fmma-npm/http-client';
 import { ObjPath } from '@fmma-npm/state';
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { DEFAULT_HEIGHT, DEFAULT_HEIGHT_DOUBLE, DEFAULT_HEIGHT_HALF, DEFAULT_WIDTH, API_HOST } from '../constants';
+import { API_HOST, DEFAULT_HEIGHT, DEFAULT_HEIGHT_DOUBLE, DEFAULT_HEIGHT_HALF, DEFAULT_WIDTH } from '../constants';
 import { get_rect } from '../functions/get_rect';
 import { get_viewport } from '../functions/get_width';
 import { is_mobile } from '../functions/is_mobile';
@@ -16,6 +16,7 @@ import './Icon';
 import './ImagePreview';
 import './Nav';
 import './NavMobile';
+import './NewSite';
 import './Overview';
 import './Page';
 import type { Bpage } from './Page';
@@ -56,9 +57,6 @@ export class Bapp extends LitElement {
         return this._site_root;
     }
 
-    @property({ type: Boolean, reflect: true })
-    dev = false
-
     @state()
     private _comming_from_desktop = false;
 
@@ -89,22 +87,22 @@ export class Bapp extends LitElement {
     @state()
     private _is_settings_opened = false;
 
+    @state()
+    private _site_is_new = false;
+
     private async _load_site() {
         const sdo = await this._get_site_object()
         if (sdo != null) {
-            if (sdo.devVersion === sdo.publishedVersion) {
-
-            }
-            const pages = await this._get_pages(
-                this.dev
-                    ? sdo.devVersion
-                    : sdo.publishedVersion
-            ) ?? [{ title: 'Ny side', subPages: [], tiles: [] }];
+            const pages = await this._get_pages(sdo.publishedVersion) ?? [{ title: 'Ny side', subPages: [], tiles: [] }];
             state_manager.reset({ pages, sdo });
+
+            setTimeout(() =>
+                this._try_set_current_page()
+            );
         }
-        setTimeout(() =>
-            this._try_set_current_page()
-        );
+        else {
+            this._site_is_new = true;
+        }
     }
 
     private get _tiles() {
@@ -518,140 +516,17 @@ export class Bapp extends LitElement {
         return db.putObject<SiteDatabaseObject>(`gal/${this.site_root}/site`, siteObject);
     }
 
-    private _site_versions_event_handlers = {
-        change: async (e: CustomEvent<{ row: SiteVersion, i: number, value: string }>) => {
-            const { row, i, value } = e.detail;
-            if (row.name === value)
-                return;
-
-            const obj = await this._get_site_object();
-            const pages = await this._get_pages(row.name);
-
-            if (obj == null || pages == null)
-                return;
-
-            if (obj.versions.some(x => x.name === value)) {
-                alert(`En version med navnet ${value} findes allerede`)
-                return;
-            }
-
-            obj.versions[i].name = value;
-
-            if (row.name === obj.devVersion)
-                obj.devVersion = value;
-            if (row.name === obj.publishedVersion)
-                obj.publishedVersion = value;
-
-            await this._delete_pages(row.name);
-            await this._put_pages(value, pages);
-            await this._put_site_object(obj);
-
-            await this._load_site();
-        },
-
-        duplicate: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
-            const { row, i } = e.detail;
-            const obj = await this._get_site_object();
-            const pages = await this._get_pages(row.name);
-
-            if (obj == null || pages == null)
-                return;
-
-            let name = row.name;
-            let origName = name;
-            let ix = 0;
-            const match = name.match(/\(\d+\)$/);
-            if (match) {
-                origName = name.slice(0, match.index)
-                ix = +match[0].slice(1, -1)
-            }
-
-            while (obj.versions.find(x => x.name === name)) {
-                ix++;
-                name = `${origName} (${ix})`;
-            }
-
-            const date = new Date();
-
-            obj.versions.push({
-                name,
-                created: date,
-                modified: date
-            });
-
-            await this._put_pages(name, pages);
-            await this._put_site_object(obj);
-
-            await this._load_site();
-
-        },
-
-        open: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
-            const { row, i } = e.detail;
-            const obj = await this._get_site_object();
-
-            if (obj == null)
-                return;
-
-            obj.devVersion = row.name;
-
-            await this._put_site_object(obj);
-            await this._load_site();
-            this._close_settings();
-        },
-
-        delete: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
-            const { row, i } = e.detail;
-
-            const obj = await this._get_site_object();
-
-            if (obj == null)
-                return;
-
-            obj.versions = obj.versions.filter(x => x.name !== row.name);
-
-            if (row.name === obj.devVersion)
-                obj.devVersion = '';
-
-            await this._delete_pages(row.name);
-            await this._put_site_object(obj);
-
-            await this._load_site();
-        },
-
-        publish: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
-            const { row, i } = e.detail;
-            const obj = await this._get_site_object();
-            if (obj == null)
-                return;
-            obj.publishedVersion = row.name;
-            if (obj.devVersion === obj.publishedVersion)
-                obj.devVersion = '';
-
-            await this._put_site_object(obj);
-            await this._load_site();
-        },
-
-        rename_site: async (e: CustomEvent<string>) => {
-            const new_title = e.detail;
-            const obj = await this._get_site_object();
-            if (obj == null)
-                return;
-            obj.siteTitle = new_title;
-
-            await this._put_site_object(obj);
-            await this._load_site();
-        }
-    }
-
     render() {
+        if (this._site_is_new) {
+            return html`<b-new-site .site_root=${this.site_root}></b-new-site>`;
+        }
         if (this._is_settings_opened) {
             return html`
                 <b-settings
-                    @rename-site=${this._site_versions_event_handlers.rename_site}
-                    .sdo=${this._sdo}
+                    @close-settings=${this._close_settings}
+                    @save-settings=${this._gem}
+                    .site_root=${this.site_root}
                 ></b-settings>
-                <button @click=${() => this._close_settings()}> Luk indstillinger </button>
             `;
         }
 
@@ -690,8 +565,7 @@ export class Bapp extends LitElement {
                         `
             }
                     <div class="page-wrapper">
-                        ${this._renderButtons()
-            }
+                        ${this._renderButtons()}
 
                         <b-page .path=${pagePath} .mobile=${this._mobile} .page=${page} @open-preview=${this._open_preview} @b-set-loading=${this._set_loading} .editting=${this._editting} .viewport=${this._viewport}></b-page>
                     </div>

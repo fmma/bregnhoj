@@ -49,7 +49,7 @@ export interface SiteDatabaseObject {
     soMeLinks?: SoMeLink[]
 }
 
-export const socialMediaNames = [
+export const SOCIAL_MEDIA_NAMES = [
     'facebook',
     'x-twitter',
     'instagram',
@@ -61,7 +61,7 @@ export const socialMediaNames = [
     'tiktok',
 ] as const
 
-export type SoMeName = (typeof socialMediaNames)[number];
+export type SoMeName = (typeof SOCIAL_MEDIA_NAMES)[number];
 
 export interface SoMeLink {
     name: SoMeName

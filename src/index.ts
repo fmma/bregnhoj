@@ -10,5 +10,4 @@ const app: Bapp = document.createElement('b-app') as Bapp;
 const site = siteFromParams ?? siteNameFromHtml ?? "bregnhoj";
 
 app.site_root = site;
-app.dev = true;
 document.body.appendChild(app);
