@@ -1,6 +1,6 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { renderSoMeIcon } from "../functions/renderSoMeIcon";
+import { render_so_me_icon } from "../functions/render_so_me_icon";
 import { urlify } from "../functions/urlify";
 import { Page, SubPage, SoMeLink } from "../types";
 import { state_manager } from "../state_manager";
@@ -205,7 +205,7 @@ export class Nav extends LitElement {
                         : nothing
                 }
                 ${this.soMeLinks.map(soMeLink => soMeLink.user && html`
-                        <li>${renderSoMeIcon(soMeLink)}</li>
+                        <li>${render_so_me_icon(soMeLink)}</li>
                     `)}
             </ul>
         </div>

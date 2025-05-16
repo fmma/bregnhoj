@@ -1,7 +1,7 @@
 import { html, LitElement } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { grid } from '../constants';
-import { readFile } from '../functions/readFile';
+import { read_file } from '../functions/read_file';
 import { snap } from '../functions/snap';
 import { Bitmap } from '../models/bitmap';
 import type { Rect, Tile, Viewport } from '../types';
@@ -59,7 +59,7 @@ export class BnewTiles extends LitElement {
                         cancelable: true,
                         composed: true
                     }));
-                const { compressed, uncompressed, thumbnail, w, h, ogw, ogh } = await readFile(f);
+                const { compressed, uncompressed, thumbnail, w, h, ogw, ogh } = await read_file(f);
 
                 const factor = Math.min(rect.w / w, rect.h / h);
 

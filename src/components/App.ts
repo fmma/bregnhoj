@@ -5,8 +5,8 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { defaultHeight, defaultHeightDouble, defaultHeightHalf, defaultWidth } from '../constants';
 import { get_rect } from '../functions/get_rect';
 import { getViewport } from '../functions/get_width';
-import { isMobile } from '../functions/isMobile';
-import { readFile } from '../functions/readFile';
+import { is_mobile } from '../functions/is_mobile';
+import { read_file } from '../functions/read_file';
 import { shuffle_iteration } from '../functions/shuffle_iteration';
 import { snap } from '../functions/snap';
 import { urlify } from '../functions/urlify';
@@ -79,7 +79,7 @@ export class Bapp extends LitElement {
     loading?: { i: number, n: number }
 
     @state()
-    mobile = isMobile();
+    mobile = is_mobile();
 
     @state()
     _state = state_manager.state;
@@ -202,7 +202,7 @@ export class Bapp extends LitElement {
         if (newViewport.pixelRatio === this._viewport.pixelRatio && newViewport.width === this._viewport.width)
             return;
 
-        this.mobile = isMobile();
+        this.mobile = is_mobile();
         this._viewport = newViewport;
     }
 
@@ -312,7 +312,7 @@ export class Bapp extends LitElement {
     uploadImages = async (e: { detail: File[] }) => {
 
         for (const f of e.detail) {
-            const { compressed, uncompressed, thumbnail, w, h, ogw, ogh } = await readFile(f);
+            const { compressed, uncompressed, thumbnail, w, h, ogw, ogh } = await read_file(f);
 
             let scale = defaultHeight / h;
             let e: Expanse = { w: snap(w * scale), h: snap(h * scale) }

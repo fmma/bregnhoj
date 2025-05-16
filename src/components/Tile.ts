@@ -2,7 +2,7 @@ import { html, LitElement, nothing, PropertyValueMap } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { serverUrlPrefix } from '../constants';
-import { readFile } from '../functions/readFile';
+import { read_file } from '../functions/read_file';
 import { snap } from '../functions/snap';
 import './Icon';
 import { getText } from './TextEditor';
@@ -324,7 +324,7 @@ export class Btile extends LitElement {
         const f = e.detail[0];
         const { image } = this;
         if(f) {
-            const { compressed, uncompressed, thumbnail, w, h, ogw, ogh } = await readFile(f);
+            const { compressed, uncompressed, thumbnail, w, h, ogw, ogh } = await read_file(f);
             this.image = {
                 ...image,
                 url: `url(${thumbnail})`,

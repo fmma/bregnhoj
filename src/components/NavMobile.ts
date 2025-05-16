@@ -2,7 +2,7 @@ import { css, html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { urlify } from "../functions/urlify";
 import { Page, SoMeLink, SubPage } from "../types";
-import { renderSoMeIcon } from "../functions/renderSoMeIcon";
+import { render_so_me_icon } from "../functions/render_so_me_icon";
 
 let counter = 0;
 
@@ -62,7 +62,7 @@ export class BnavMobile extends LitElement {
                 <a href="" class="mmenu-logo">${this.siteTitle}</a>
                 <input class="mmenu-side-menu" type="checkbox" id="mmenu-side-menu${this._id}" />
                 ${this.soMeLinks.map(soMeLink => soMeLink.user && html`
-                        ${renderSoMeIcon(soMeLink)}
+                        ${render_so_me_icon(soMeLink)}
                 `)}
                 <label class="mmenu-hamb" for="mmenu-side-menu${this._id}"><span class="mmenu-hamb-line"></span></label>
                 <nav class="mmenu-nav">

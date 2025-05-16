@@ -1,14 +1,14 @@
 import { html } from "lit";
 import { SoMeLink } from "../types";
 
-export function renderSoMeIcon(soMe: SoMeLink) {
-    const url = soMeUrl(soMe)
+export function render_so_me_icon(soMe: SoMeLink) {
+    const url = so_me_url(soMe)
     return html`
         <a href="${url}" class="fa-brands fa-${soMe.name}"></a>
     `;
 }
 
-function soMeUrl(soMe: SoMeLink) {
+function so_me_url(soMe: SoMeLink) {
     switch(soMe.name) {
         case "instagram": return `https://instagram.com/_u/${soMe.user}/`
         case "facebook": return `https://facebook.com/${soMe.user}/`
