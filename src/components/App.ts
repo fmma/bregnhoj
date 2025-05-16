@@ -41,62 +41,63 @@ export class Bapp extends LitElement {
 
     renderRoot = this;
 
-    _setLoading = (e: CustomEvent<{ i: number, n: number } | undefined>) => {
-        this.loading = e.detail;
+    private _set_loading = (e: CustomEvent<{ i: number, n: number } | undefined>) => {
+        this._loading = e.detail;
     }
 
-    _siteRoot?: string;
+    private _site_root?: string;
+
     @property({ type: String, reflect: true, attribute: 'site-root' })
-    set siteRoot(x: string) {
-        this._siteRoot = x;
-        this.loadSite();
+    set site_root(x: string) {
+        this._site_root = x;
+        this._load_site();
     }
-    get siteRoot() {
-        if (this._siteRoot == null)
+    get site_root() {
+        if (this._site_root == null)
             throw new Error('Site root not set');
-        return this._siteRoot;
+        return this._site_root;
     }
 
     @property({ type: Boolean, reflect: true })
     dev = false
 
     @state()
-    commingFromDesktop = false;
+    private _comming_from_desktop = false;
 
     @state()
-    _viewport = getViewport();
+    private _viewport = getViewport();
 
     @state()
-    _currentPage: { page: number, sub?: number } = { page: 0 };
+    private _current_page: { page: number, sub?: number } = { page: 0 };
 
     @state()
-    editting = false;
+    private _editting = false;
 
     @state()
-    saving = false;
+    private _saving = false;
 
     @state()
-    loading?: { i: number, n: number }
+    private _loading?: { i: number, n: number }
 
     @state()
-    mobile = is_mobile();
+    private _mobile = is_mobile();
 
     @state()
-    _state = state_manager.state;
+    private _state = state_manager.state;
 
     @state()
-    previewTileIndex?: { pageIndex: number, subPageIndex?: number, tileIndex: number };
+    private _preview_tile_index?: { pageIndex: number, subPageIndex?: number, tileIndex: number };
 
     @state()
-    _isSettingsOpened = false;
+    private _is_settings_opened = false;
 
-    async loadSite() {
-        const sdo = await this.getSiteObject()
+    private async _load_site() {
+        const sdo = await this._get_site_object()
         if (sdo != null) {
             if (sdo.devVersion === sdo.publishedVersion) {
 
             }
-            const pages = await this.getPages(
+            const pages = await this._get_pages(
                 this.dev
                     ? sdo.devVersion
                     : sdo.publishedVersion
@@ -104,80 +105,77 @@ export class Bapp extends LitElement {
             state_manager.reset({ pages, sdo });
         }
         setTimeout(() =>
-            this.trySetCurrentPage()
+            this._try_set_current_page()
         );
     }
 
-    get tiles() {
-        return this.pages.flatMap(p => [...p.tiles, ...p.subPages.flatMap(sp => sp.tiles)]);
+    private get _tiles() {
+        return this._pages.flatMap(p => [...p.tiles, ...p.subPages.flatMap(sp => sp.tiles)]);
     }
 
-    get images() {
-        return this.tiles.map(t => t.image).filter((x): x is Image => x != null);
+    private get _images() {
+        return this._tiles.map(t => t.image).filter((x): x is Image => x != null);
     }
 
-    trySetCurrentPage() {
+    private _try_set_current_page() {
         const hash = window.location.hash.slice(1);
 
-        for (const [i, page] of this.pages.entries()) {
-            if (hash == urlify(this.pages, page.title)) {
-                this._currentPage = { page: i }
+        for (const [i, page] of this._pages.entries()) {
+            if (hash == urlify(this._pages, page.title)) {
+                this._current_page = { page: i }
                 return;
             }
             for (const [j, subPage] of page.subPages.entries()) {
-                if (hash == urlify(this.pages, page.title, subPage.title)) {
-                    this._currentPage = { page: i, sub: j };
+                if (hash == urlify(this._pages, page.title, subPage.title)) {
+                    this._current_page = { page: i, sub: j };
                     return;
                 }
             }
         }
-        this._currentPage = { page: 0 };
+        this._current_page = { page: 0 };
     }
 
-    updatePage = (i: number) => (e: { detail: Page }) => {
-        const { pages } = this;
-        this.pages = [...pages.slice(0, i), e.detail, ...pages.slice(i + 1)];
-    }
-    updatePages = (e: { detail: Page[] }) => {
-        this.pages = e.detail;
+    private _update_page = (i: number) => (e: { detail: Page }) => {
+        const pages = this._pages;
+        this._pages = [...pages.slice(0, i), e.detail, ...pages.slice(i + 1)];
     }
 
-    openPreview = (e: { detail: { tileIndex: number } }) => {
-        const { page, sub } = this._currentPage;
-        this.previewTileIndex = { pageIndex: page, subPageIndex: sub, tileIndex: e.detail.tileIndex };
+    private _open_preview = (e: { detail: { tileIndex: number } }) => {
+        const { page, sub } = this._current_page;
+        this._preview_tile_index = { pageIndex: page, subPageIndex: sub, tileIndex: e.detail.tileIndex };
     }
 
-    updateSubPage = (i: number, j: number) => (e: { detail: SubPage }) => {
-        const { pages } = this;
+    private _update_sub_page = (i: number, j: number) => (e: { detail: SubPage }) => {
+        const pages = this._pages;
         const page = pages[i];
-        this.pages = [...pages.slice(0, i), { ...page, subPages: [...page.subPages.slice(0, j), e.detail, ...page.subPages.slice(j + 1)] }, ...pages.slice(i + 1)];
+        this._pages = [...pages.slice(0, i), { ...page, subPages: [...page.subPages.slice(0, j), e.detail, ...page.subPages.slice(j + 1)] }, ...pages.slice(i + 1)];
     }
 
     connectedCallback(): void {
         super.connectedCallback();
-        window.addEventListener('resize', this.resize);
-        window.addEventListener('hashchange', this.hashChange);
-        window.addEventListener('keyup', this.keyup)
-        window.addEventListener('keydown', this.keydown)
-        window.addEventListener('keypress', this.keypress)
-        screen.orientation.addEventListener('change', this.resize);
+        window.addEventListener('resize', this._resize);
+        window.addEventListener('hashchange', this._hash_change);
+        window.addEventListener('keyup', this._keyup)
+        window.addEventListener('keydown', this._keydown)
+        window.addEventListener('keypress', this._keypress)
+        screen.orientation.addEventListener('change', this._resize);
     }
 
     disconnectedCallback(): void {
         super.disconnectedCallback();
-        window.removeEventListener('resize', this.resize);
-        window.removeEventListener('hashchange', this.hashChange);
-        window.removeEventListener('keyup', this.keyup);
-        window.removeEventListener('keydown', this.keydown);
-        window.removeEventListener('keypress', this.keypress);
-        screen.orientation.removeEventListener('change', this.resize);
+        window.removeEventListener('resize', this._resize);
+        window.removeEventListener('hashchange', this._hash_change);
+        window.removeEventListener('keyup', this._keyup);
+        window.removeEventListener('keydown', this._keydown);
+        window.removeEventListener('keypress', this._keypress);
+        screen.orientation.removeEventListener('change', this._resize);
     }
 
-    hashChange = () => this.trySetCurrentPage()
+    private _hash_change = () => this._try_set_current_page()
 
-    keyup = (e: KeyboardEvent) => {
+    private _keyup = (e: KeyboardEvent) => {
     }
-    keydown = (e: KeyboardEvent) => {
+    private _keydown = (e: KeyboardEvent) => {
         if (this.querySelector('b-text-editor') != null)
             return;
         if (e.key === 'a' && e.ctrlKey) {
@@ -188,79 +186,72 @@ export class Bapp extends LitElement {
             }
         }
         else if (e.key === 'z' && e.ctrlKey) {
-            this.undo();
+            this._undo();
         }
         else if (e.key === 'y' && e.ctrlKey) {
-            this.redo();
+            this._redo();
         }
     }
-    keypress = (e: KeyboardEvent) => {
+    private _keypress = (e: KeyboardEvent) => {
     }
 
-    resize = (e: Event) => {
+    private _resize = (e: Event) => {
         const newViewport = getViewport();
         if (newViewport.pixelRatio === this._viewport.pixelRatio && newViewport.width === this._viewport.width)
             return;
 
-        this.mobile = is_mobile();
+        this._mobile = is_mobile();
         this._viewport = newViewport;
     }
 
-    get previewTile() {
-        const ix = this.previewTileIndex
+    private get _preview_tile() {
+        const ix = this._preview_tile_index
         if (ix == null)
             return undefined;
         const { pageIndex, tileIndex, subPageIndex } = ix;
 
         return subPageIndex == null
-            ? this.pages[pageIndex].tiles[tileIndex]
-            : this.pages[pageIndex].subPages[subPageIndex].tiles[tileIndex];
+            ? this._pages[pageIndex].tiles[tileIndex]
+            : this._pages[pageIndex].subPages[subPageIndex].tiles[tileIndex];
     }
 
-    get pages() {
+    private get _pages() {
         return this._state.pages;
     }
-
-    get soMeLinks() {
-        return this._state.sdo.soMeLinks ?? [];
-    }
-
-    set pages(pages: Page[]) {
+    private set _pages(pages: Page[]) {
         state_manager.patch(state_manager.path().at('pages').patch(pages));
     }
-    get sdo() {
+
+    private get so_me_links() {
+        return this._state.sdo.soMeLinks ?? [];
+    }
+    private get _sdo() {
         return this._state.sdo;
     }
-
-    set sdo(sdo: SiteDatabaseObject) {
+    private set _sdo(sdo: SiteDatabaseObject) {
         state_manager.patch(state_manager.path().at('sdo').patch(sdo));
     }
-
-    get canUndo() {
+    private get _can_undo() {
         return state_manager.canUndo;
     }
-
-    get canRedo() {
+    private get _can_redo() {
         return state_manager.canRedo
     }
-
-    get canSave() {
-        return this.canUndo;
+    private get _can_save() {
+        return this._can_undo;
+    }
+    private get _can_open_settings() {
+        return !this._can_save;
     }
 
-    get canOpenSettings() {
-        return !this.canSave;
-    }
-
-
-    newTextBox = () => {
+    private _new_text_box = () => {
         const e: Expanse = { w: defaultWidth, h: defaultHeight }
 
-        if (this._currentPage.sub != null) {
-            const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
+        if (this._current_page.sub != null) {
+            const subPage = this._pages[this._current_page.page].subPages[this._current_page.sub];
             const r: Rect = get_rect(e, subPage.tiles);
             const detail: Tile = { rect: r, textBlock: { text: '<h1>Overskrift</h1><p>Skriv tekst her</p>' } }
-            this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
+            this._update_sub_page(this._current_page.page, this._current_page.sub)({
                 detail: {
                     ...subPage,
                     tiles: [...subPage.tiles, detail]
@@ -268,10 +259,10 @@ export class Bapp extends LitElement {
             });
         }
         else {
-            const page = this.pages[this._currentPage.page]
+            const page = this._pages[this._current_page.page]
             const r: Rect = get_rect(e, page.tiles);
             const detail: Tile = { rect: r, textBlock: { text: '<h1>Overskrift</h1><p>Skriv tekst her</p>' } }
-            this.updatePage(this._currentPage.page)({
+            this._update_page(this._current_page.page)({
                 detail: {
                     ...page,
                     tiles: [...page.tiles, detail]
@@ -281,10 +272,10 @@ export class Bapp extends LitElement {
 
     }
 
-    shuffle = () => {
-        const tiles = this._currentPage.sub != null
-            ? this.pages[this._currentPage.page].subPages[this._currentPage.sub].tiles
-            : this.pages[this._currentPage.page].tiles;
+    private _shuffle = () => {
+        const tiles = this._current_page.sub != null
+            ? this._pages[this._current_page.page].subPages[this._current_page.sub].tiles
+            : this._pages[this._current_page.page].tiles;
 
         let { newTiles, badness } = shuffle_iteration(tiles);
         for (let i = 0; i < 200; ++i) {
@@ -295,21 +286,21 @@ export class Bapp extends LitElement {
             }
         }
 
-        if (this._currentPage.sub != null) {
-            const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
-            this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
+        if (this._current_page.sub != null) {
+            const subPage = this._pages[this._current_page.page].subPages[this._current_page.sub];
+            this._update_sub_page(this._current_page.page, this._current_page.sub)({
                 detail: { ...subPage, tiles: newTiles }
             });
         }
         else {
-            const page = this.pages[this._currentPage.page]
-            this.updatePage(this._currentPage.page)({
+            const page = this._pages[this._current_page.page]
+            this._update_page(this._current_page.page)({
                 detail: { ...page, tiles: newTiles }
             });
         }
     }
 
-    uploadImages = async (e: { detail: File[] }) => {
+    private _upload_images = async (e: { detail: File[] }) => {
 
         for (const f of e.detail) {
             const { compressed, uncompressed, thumbnail, w, h, ogw, ogh } = await read_file(f);
@@ -325,8 +316,8 @@ export class Bapp extends LitElement {
                 e = { w: snap(w * scale), h: snap(h * scale) }
             }
 
-            if (this._currentPage.sub != null) {
-                const subPage = this.pages[this._currentPage.page].subPages[this._currentPage.sub];
+            if (this._current_page.sub != null) {
+                const subPage = this._pages[this._current_page.page].subPages[this._current_page.sub];
                 const rect: Rect = get_rect(e, subPage.tiles);
 
                 const detail: Tile = {
@@ -344,7 +335,7 @@ export class Bapp extends LitElement {
                     }
                 };
 
-                this.updateSubPage(this._currentPage.page, this._currentPage.sub)({
+                this._update_sub_page(this._current_page.page, this._current_page.sub)({
                     detail: {
                         ...subPage,
                         tiles: [...subPage.tiles, detail]
@@ -352,7 +343,7 @@ export class Bapp extends LitElement {
                 });
             }
             else {
-                const page = this.pages[this._currentPage.page]
+                const page = this._pages[this._current_page.page]
                 const rect: Rect = get_rect(e, page.tiles);
 
                 const detail: Tile = {
@@ -370,7 +361,7 @@ export class Bapp extends LitElement {
                     }
                 };
 
-                this.updatePage(this._currentPage.page)({
+                this._update_page(this._current_page.page)({
                     detail: {
                         ...page,
                         tiles: [...page.tiles, detail]
@@ -380,55 +371,55 @@ export class Bapp extends LitElement {
         }
     }
 
-    openSettings = () => {
-        this._isSettingsOpened = true;
+    private _open_settings = () => {
+        this._is_settings_opened = true;
     }
 
-    closeSettings = () => {
-        this._isSettingsOpened = false;
+    private _close_settings = () => {
+        this._is_settings_opened = false;
     }
 
-    undo = () => {
-        if (this.canUndo) {
+    private _undo = () => {
+        if (this._can_undo) {
             state_manager.undo();
         }
     }
 
-    redo = () => {
-        if (this.canRedo) {
+    private _redo = () => {
+        if (this._can_redo) {
             state_manager.redo();
         }
     }
 
-    startEditting = async () => {
-        if (!this.sdo?.devVersion)
-            this.openSettings();
-        this.editting = true;
+    private _start_editting = async () => {
+        if (!this._sdo?.devVersion)
+            this._open_settings();
+        this._editting = true;
         state_manager.reset();
-        await this.loadSite();
+        await this._load_site();
     }
 
-    stopEditting = async () => {
-        this.editting = false;
+    private _stop_editting = async () => {
+        this._editting = false;
         state_manager.reset();
-        await this.loadSite();
+        await this._load_site();
     }
 
-    toggleMobile = () => {
-        this.mobile = !this.mobile;
-        this.commingFromDesktop = true;
+    private _toggle_mobile = () => {
+        this._mobile = !this._mobile;
+        this._comming_from_desktop = true;
     }
 
-    gem = async () => {
-        if (this.sdo == null)
+    private _gem = async () => {
+        if (this._sdo == null)
             return;
 
         const saveFile = async (data: File | Blob, fileName: string) => {
             return await media.put(data as File, fileName);
         }
 
-        this.saving = true;
-        const { pages } = this;
+        this._saving = true;
+        const { _pages: pages } = this;
 
         const saveInternal = async () => {
             for (const p of pages.flatMap(p => [p, ...p.subPages ?? []])) {
@@ -484,19 +475,19 @@ export class Bapp extends LitElement {
                 }))
             }));
 
-            const obj = await this.getSiteObject();
-            const version = obj?.versions.find(x => x.name === this.sdo?.devVersion)
+            const obj = await this._get_site_object();
+            const version = obj?.versions.find(x => x.name === this._sdo?.devVersion)
             if (obj == null || version == null) {
                 return;
             }
             version.modified = new Date();
-            obj.imageMetadata = this.sdo.imageMetadata;
-            obj.soMeLinks = this.sdo.soMeLinks;
-            await this.putPages(this.sdo?.devVersion, dbValue);
-            await this.putSiteObject(obj);
+            obj.imageMetadata = this._sdo.imageMetadata;
+            obj.soMeLinks = this._sdo.soMeLinks;
+            await this._put_pages(this._sdo?.devVersion, dbValue);
+            await this._put_site_object(obj);
 
-            this.saving = false;
-            this.stopEditting();
+            this._saving = false;
+            this._stop_editting();
         }
 
 
@@ -505,44 +496,39 @@ export class Bapp extends LitElement {
         }
         catch (err) {
 
-            this.saving = false;
+            this._saving = false;
             alert("Noget gik galt! Det er nok en god ide at reloade siden. Beklager.");
         }
     }
 
-    getPages(name: string) {
-        const { siteRoot } = this;
-        return db.getObject<Page[]>(`gal/${siteRoot}/pages/${name}`);
+    private _get_pages(name: string) {
+        return db.getObject<Page[]>(`gal/${this.site_root}/pages/${name}`);
     }
 
-    putPages(name: string, pages: Page[]) {
-        const { siteRoot } = this;
-        return db.putObject<Page[]>(`gal/${siteRoot}/pages/${name}`, pages);
+    private _put_pages(name: string, pages: Page[]) {
+        return db.putObject<Page[]>(`gal/${this.site_root}/pages/${name}`, pages);
     }
 
-    deletePages(name: string) {
-        const { siteRoot } = this;
-        return db.putObject<Page[]>(`gal/${siteRoot}/pages/${name}`, undefined);
+    private _delete_pages(name: string) {
+        return db.putObject<Page[]>(`gal/${this.site_root}/pages/${name}`, undefined);
     }
 
-    getSiteObject() {
-        const { siteRoot } = this;
-        return db.getObject<SiteDatabaseObject>(`gal/${siteRoot}/site`);
+    private _get_site_object() {
+        return db.getObject<SiteDatabaseObject>(`gal/${this.site_root}/site`);
     }
 
-    putSiteObject(siteObject: SiteDatabaseObject) {
-        const { siteRoot } = this;
-        return db.putObject<SiteDatabaseObject>(`gal/${siteRoot}/site`, siteObject);
+    private _put_site_object(siteObject: SiteDatabaseObject) {
+        return db.putObject<SiteDatabaseObject>(`gal/${this.site_root}/site`, siteObject);
     }
 
-    siteVersionsEventHandlers = {
+    private _site_versions_event_handlers = {
         change: async (e: CustomEvent<{ row: SiteVersion, i: number, value: string }>) => {
             const { row, i, value } = e.detail;
             if (row.name === value)
                 return;
 
-            const obj = await this.getSiteObject();
-            const pages = await this.getPages(row.name);
+            const obj = await this._get_site_object();
+            const pages = await this._get_pages(row.name);
 
             if (obj == null || pages == null)
                 return;
@@ -559,17 +545,17 @@ export class Bapp extends LitElement {
             if (row.name === obj.publishedVersion)
                 obj.publishedVersion = value;
 
-            await this.deletePages(row.name);
-            await this.putPages(value, pages);
-            await this.putSiteObject(obj);
+            await this._delete_pages(row.name);
+            await this._put_pages(value, pages);
+            await this._put_site_object(obj);
 
-            await this.loadSite();
+            await this._load_site();
         },
 
         duplicate: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
             const { row, i } = e.detail;
-            const obj = await this.getSiteObject();
-            const pages = await this.getPages(row.name);
+            const obj = await this._get_site_object();
+            const pages = await this._get_pages(row.name);
 
             if (obj == null || pages == null)
                 return;
@@ -596,31 +582,31 @@ export class Bapp extends LitElement {
                 modified: date
             });
 
-            await this.putPages(name, pages);
-            await this.putSiteObject(obj);
+            await this._put_pages(name, pages);
+            await this._put_site_object(obj);
 
-            await this.loadSite();
+            await this._load_site();
 
         },
 
         open: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
             const { row, i } = e.detail;
-            const obj = await this.getSiteObject();
+            const obj = await this._get_site_object();
 
             if (obj == null)
                 return;
 
             obj.devVersion = row.name;
 
-            await this.putSiteObject(obj);
-            await this.loadSite();
-            this.closeSettings();
+            await this._put_site_object(obj);
+            await this._load_site();
+            this._close_settings();
         },
 
         delete: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
             const { row, i } = e.detail;
 
-            const obj = await this.getSiteObject();
+            const obj = await this._get_site_object();
 
             if (obj == null)
                 return;
@@ -630,140 +616,137 @@ export class Bapp extends LitElement {
             if (row.name === obj.devVersion)
                 obj.devVersion = '';
 
-            await this.deletePages(row.name);
-            await this.putSiteObject(obj);
+            await this._delete_pages(row.name);
+            await this._put_site_object(obj);
 
-            await this.loadSite();
+            await this._load_site();
         },
 
         publish: async (e: CustomEvent<{ row: SiteVersion, i: number }>) => {
             const { row, i } = e.detail;
-            const obj = await this.getSiteObject();
+            const obj = await this._get_site_object();
             if (obj == null)
                 return;
             obj.publishedVersion = row.name;
             if (obj.devVersion === obj.publishedVersion)
                 obj.devVersion = '';
 
-            await this.putSiteObject(obj);
-            await this.loadSite();
+            await this._put_site_object(obj);
+            await this._load_site();
         },
 
         renameSite: async (e: CustomEvent<string>) => {
             const newTitle = e.detail;
-            const obj = await this.getSiteObject();
+            const obj = await this._get_site_object();
             if (obj == null)
                 return;
             obj.siteTitle = newTitle;
 
-            await this.putSiteObject(obj);
-            await this.loadSite();
+            await this._put_site_object(obj);
+            await this._load_site();
         }
     }
 
     render() {
-        const { openPreview, pages, mobile, soMeLinks } = this;
+        const { _open_preview, _pages: pages, _mobile: mobile, so_me_links: soMeLinks } = this;
 
-
-        if (this._isSettingsOpened) {
+        if (this._is_settings_opened) {
             return html`
                 <b-settings
-                    @rename-site=${this.siteVersionsEventHandlers.renameSite}
-                    .siteDabaseObject=${this.sdo}
+                    @rename-site=${this._site_versions_event_handlers.renameSite}
+                    .siteDabaseObject=${this._sdo}
                 ></b-settings>
-                <button @click=${() => this.closeSettings()}> Luk indstillinger </button>
+                <button @click=${() => this._close_settings()}> Luk indstillinger </button>
             `;
         }
 
-        const page = this._currentPage?.sub != null
-            ? this.pages[this._currentPage.page]?.subPages[this._currentPage.sub]
-            : this.pages[this._currentPage.page];
+        const page = this._current_page?.sub != null
+            ? this._pages[this._current_page.page]?.subPages[this._current_page.sub]
+            : this._pages[this._current_page.page];
 
         if (page == null)
-            return this.editting
+            return this._editting
                 ? html`
                     <div class="buttons${mobile ? '-mobile' : ''}">
-                        <b-icon title="Rå" icon="code" @click=${this.openSettings}></b-icon>
+                        <b-icon title="Rå" icon="code" @click=${this._open_settings}></b-icon>
                     </div>
                 `
                 : nothing;
 
-        if (this.loading) {
+        if (this._loading) {
             return html`
-                <progress min="0" max="${this.loading.n}" value=${this.loading.i}></progress>
+                <progress min="0" max="${this._loading.n}" value=${this._loading.i}></progress>
             `
         }
 
         let pagePath: ObjPath<State, PageOrSubPage> =
-            this._currentPage.sub != null
-                ? state_manager.path().at('pages').ix(this._currentPage.page).at('subPages').ix(this._currentPage.sub)
-                : state_manager.path().at('pages').ix(this._currentPage.page);
+            this._current_page.sub != null
+                ? state_manager.path().at('pages').ix(this._current_page.page).at('subPages').ix(this._current_page.sub)
+                : state_manager.path().at('pages').ix(this._current_page.page);
 
         return html`
-            <b-image-preview .sdo=${this.sdo} .tile=${this.previewTile} @close-preview=${() => this.previewTileIndex = undefined} .editting=${this.editting} .mobile=${mobile} .viewport=${this._viewport}></b-image-preview>
+            <b-image-preview .sdo=${this._sdo} .tile=${this._preview_tile} @close-preview=${() => this._preview_tile_index = undefined} .editting=${this._editting} .mobile=${mobile} .viewport=${this._viewport}></b-image-preview>
             <div class="outer">
                 <div class="pages">
                     ${mobile
-                ? html`<b-nav-mobile .pages=${pages} .soMeLinks=${soMeLinks} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav-mobile>`
+                ? html`<b-nav-mobile .pages=${pages} .soMeLinks=${soMeLinks} .siteTitle=${this._sdo?.siteTitle ?? ''}></b-nav-mobile>`
                 : html`
-                            <b-nav .pages=${pages}  .soMeLinks=${soMeLinks} .editting=${this.editting} .siteTitle=${this.sdo?.siteTitle ?? ''}></b-nav>
+                            <b-nav .pages=${pages}  .soMeLinks=${soMeLinks} .editting=${this._editting} .siteTitle=${this._sdo?.siteTitle ?? ''}></b-nav>
                         `
             }
                     <div class="page-wrapper">
                         ${this._renderButtons()
             }
 
-                        <b-page .path=${pagePath} .mobile=${mobile} .page=${page} @open-preview=${openPreview} @b-set-loading=${this._setLoading} .editting=${this.editting} .viewport=${this._viewport}></b-page>
+                        <b-page .path=${pagePath} .mobile=${mobile} .page=${page} @open-preview=${_open_preview} @b-set-loading=${this._set_loading} .editting=${this._editting} .viewport=${this._viewport}></b-page>
                     </div>
 
                     <div class="footer">
                         <hr>
                     </div>
-                    ${this._renderOverview()}
+                    ${this._render_overview()}
                 </div>
             </div>
         `;
     }
 
-    private _renderOverview() {
-        const { editting } = this;
-        if (!editting)
+    private _render_overview() {
+        if (!this._editting)
             return nothing;
         return html`
-            <b-overview .sdo=${this.sdo} .images=${this.images}></b-overview>
+            <b-overview .sdo=${this._sdo} .images=${this._images}></b-overview>
         `;
     }
 
     private _renderButtons() {
-        const { gem, startEditting, mobile, saving } = this;
 
         if (!location.search.includes('admin'))
             return nothing;
 
-        return mobile && !this.commingFromDesktop ? nothing
+        return this._mobile && !this._comming_from_desktop ? nothing
             : html`
-            <div class="buttons${mobile ? '-mobile' : ''}">
-                ${mobile
+            <div class="buttons${this._mobile ? '-mobile' : ''}">
+                ${this._mobile
                     ? nothing
-                    : this.editting
+                    : this._editting
                         ? html`
-                            <b-icon title="Bland billeder" @click=${this.shuffle} icon="shuffle"></b-icon>
-                            <b-icon title="Ny tekstboks" @click=${this.newTextBox} icon="edit-text"></b-icon>
-                            <b-icon title="Upload billede(r)" @file-change=${this.uploadImages} icon="file" file-input multiple accept="image/jpeg, image/png, image/jpg"></b-icon>
-                            <b-icon title="Indstillinger" @click=${this.openSettings} .disabled=${!this.canOpenSettings} icon="code"></b-icon>
-                            <b-icon title="Undo" @click=${this.undo} .disabled=${saving || !this.canUndo} icon="undo"></b-icon>
-                            <b-icon title="Redo" @click=${this.redo} .disabled=${saving || !this.canRedo} icon="redo"></b-icon>
-                            <b-icon title="Gem" @click=${gem} .disabled=${saving || !this.canSave} icon="save"></b-icon>
-                            <b-icon title="Kaser ændringer" @click=${this.stopEditting} icon="close"></b-icon>
+                            <b-icon title="Bland billeder" @click=${this._shuffle} icon="shuffle"></b-icon>
+                            <b-icon title="Ny tekstboks" @click=${this._new_text_box} icon="edit-text"></b-icon>
+                            <b-icon title="Upload billede(r)" @file-change=${this._upload_images} icon="file" file-input multiple accept="image/jpeg, image/png, image/jpg"></b-icon>
+                            <b-icon title="Indstillinger" @click=${this._open_settings} .disabled=${!this._can_open_settings} icon="code"></b-icon>
+                            <b-icon title="Undo" @click=${this._undo} .disabled=${this._saving || !this._can_undo} icon="undo"></b-icon>
+                            <b-icon title="Redo" @click=${this._redo} .disabled=${this._saving || !this._can_redo} icon="redo"></b-icon>
+                            <b-icon title="Gem" @click=${this._gem} .disabled=${this._saving || !this._can_save} icon="save"></b-icon>
+                            <b-icon title="Kaser ændringer" @click=${this._stop_editting} icon="close"></b-icon>
                         `
-                        : html`<b-icon title="Rediger" @click=${startEditting} icon="admin"></b-icon>`
+                        : html`<b-icon title="Rediger" @click=${this._start_editting} icon="admin"></b-icon>`
                 }
-                ${this.mobile
+                ${this._mobile
                     ? html`
-                        <b-icon title="Mobil" @click=${this.toggleMobile} icon="mobile"></b-icon>
+                        <b-icon title="Mobil" @click=${this._toggle_mobile} icon="mobile"></b-icon>
                     `
                     : html`
-                        <b-icon title="Desktop" @click=${this.toggleMobile} icon="desktop"></b-icon>
+                        <b-icon title="Desktop" @click=${this._toggle_mobile} icon="desktop"></b-icon>
 
                     `}
             </div>
