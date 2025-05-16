@@ -1,7 +1,7 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { serverUrlPrefix } from "../constants";
-import { getHeight } from '../functions/getWidth';
+import { getHeight } from '../functions/get_width';
 import './Icon';
 import type { SiteDatabaseObject, Tile, Viewport } from "../types";
 

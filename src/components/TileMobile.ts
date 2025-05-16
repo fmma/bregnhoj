@@ -1,7 +1,7 @@
-import { html, LitElement, nothing } from 'lit';
+import { html, LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { getHeight, getWidth } from '../functions/getWidth';
+import { getHeight, getWidth } from '../functions/get_width';
 import './Icon';
 import type { Tile } from '../types';
 

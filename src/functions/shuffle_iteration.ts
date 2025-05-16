@@ -103,12 +103,15 @@ export function shuffle_iteration(tiles: Tile[]) {
         let badness = 0;
         for (const t of newTiles) {
             if (t.image) {
-                const actualArea = t.rect.w * t.rect.h;
-                const actualRatio = t.rect.w / t.rect.h;
-                const optimalRatio = t.image.w / t.image.h;
-                let b = actualRatio - optimalRatio;
-                b = b * b;
-                badness = Math.max(badness, b) + actualArea / 1000;
+
+                const {ogw, ogh} = t.image;
+                const {w, h} = t.rect;
+                let og_ar = ogw / ogh;
+                let rect_ar = w / h;
+                let [w1, h1] =  og_ar >= rect_ar ? [w, w / og_ar] : [h * og_ar, h];
+                let s = w1 / ogw;
+
+                badness = Math.max(badness, s * s * (w - w1) * (w - w1) + s * s * (h - h1) * (h - h1));
             }
         }
         return badness;

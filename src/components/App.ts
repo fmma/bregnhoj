@@ -4,7 +4,7 @@ import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { defaultHeight, defaultHeightDouble, defaultHeightHalf, defaultWidth } from '../constants';
 import { get_rect } from '../functions/get_rect';
-import { getViewport } from '../functions/getWidth';
+import { getViewport } from '../functions/get_width';
 import { isMobile } from '../functions/isMobile';
 import { readFile } from '../functions/readFile';
 import { shuffle_iteration } from '../functions/shuffle_iteration';
@@ -287,7 +287,7 @@ export class Bapp extends LitElement {
             : this.pages[this._currentPage.page].tiles;
 
         let { newTiles, badness } = shuffle_iteration(tiles);
-        for (let i = 0; i < 20; ++i) {
+        for (let i = 0; i < 200; ++i) {
             const r = shuffle_iteration(tiles);
             if (r.badness < badness) {
                 newTiles = r.newTiles;
