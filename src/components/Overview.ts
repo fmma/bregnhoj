@@ -17,7 +17,7 @@ export class Boverview extends LitElement {
 
     render() {
         const urls0 = [
-            ...this.images.map(x => x.bigurl),
+            ...this.images.filter(x => !x.isNew).map(x => x.bigurl),
             ...Object.keys(this.sdo?.imageMetadata ?? {})
         ];
         const urls = [...new Set(urls0)];

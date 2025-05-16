@@ -1,5 +1,4 @@
 import { db } from '@fmma-npm/http-client';
-import '@fmma-npm/wc-table';
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { state_manager } from '../state_manager';
