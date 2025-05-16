@@ -12,5 +12,5 @@ export const MARGIN = 5;
 
 export const MOBILE_BREAKPOINT = 1024;
 
-export const RANDOM_TABLE_1 = [0,10,-6,15,0,-5, 9];
-export const RANDOM_TABLE_2 = [0,-20,15,-3,12,-10,-5];
+export const RANDOM_TABLE_1 = [0, 10, -6, 15, 0, -5, 9];
+export const RANDOM_TABLE_2 = [0, -20, 15, -3, 12, -10, -5];

@@ -1,4 +1,4 @@
-export function is_element_in_viewport (el: Element) {
+export function is_element_in_viewport(el: Element) {
 
     const rect = el.getBoundingClientRect();
 

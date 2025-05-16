@@ -69,7 +69,7 @@ export interface SoMeLink {
 }
 
 export interface Sites {
-    sites: {name: string}[];
+    sites: { name: string }[];
 }
 
 export interface SiteVersion {
@@ -85,8 +85,6 @@ export interface Page {
 }
 
 export type PageOrSubPage = SubPage | Page;
-
-
 
 export type Viewport = {
     width: number;

@@ -1,10 +1,11 @@
-export function shuffle<T>(array: T[]): T[] {
-    let currentIndex = array.length, randomIndex;
-    while (currentIndex != 0) {
-        randomIndex = Math.floor(Math.random() * currentIndex);
-        currentIndex--;
-        [array[currentIndex], array[randomIndex]] = [
-            array[randomIndex], array[currentIndex]];
+export function shuffle<T>(list: T[]): T[] {
+    let i = list.length;
+    while (i != 0) {
+        const j = Math.floor(Math.random() * i);
+        i--;
+        const tmp = list[i];
+        list[i] = list[j];
+        list[j] = tmp;
     }
-    return array;
+    return list;
 }
