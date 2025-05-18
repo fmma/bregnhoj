@@ -16,6 +16,7 @@
     "noEmit": true,
     /* Additional Options */
     "experimentalDecorators": true,
+    "useDefineForClassFields": false,
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
