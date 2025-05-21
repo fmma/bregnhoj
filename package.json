@@ -6,27 +6,26 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
-    "scp": "snowpack build && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/snesl.dk/bregnhoj/",
-    "release-bregnhoj": "snowpack build && sed -i 's/bregnhoj\\///g' build/index.html  && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/bregnhoj.com/",
-    "release-meisnermadsen": "snowpack build && sed -i 's/bregnhoj\\///g' build/lisogkarsten.html && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/meisnermadsen.dk/ && scp build/lisogkarsten.html fmadsen@foadell:/home/fmadsen/www_root/domains/meisnermadsen.dk/index.html",
-    "release-snesl": "snowpack build && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/snesl.dk/bregnhoj/ && scp build/snesl.html fmadsen@foadell:/home/fmadsen/www_root/domains/snesl.dk/bregnhoj/index.html"
+    "build-bregnhoj": "vite build --base https://bregnhoj.com",
+    "build-meisnermadsen": "vite build --base https://meisnermadsen.dk",
+    "build-snesl": "vite build --base https://snesl.dk/bregnhoj",
+    "release-bregnhoj": "vite build --base https://bregnhoj.com && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/bregnhoj.com/",
+    "release-meisnermadsen": "vite build  --base https://meisnermadsen.dk && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/meisnermadsen.dk/",
+    "release-snesl": "vite build --base https://snesl.dk/bregnhoj && scp -r build/* fmadsen@foadell:/home/fmadsen/www_root/domains/snesl.dk/bregnhoj/",
+    "release-all": "npm run release-bregnhoj && npm run release-meisnermadsen && npm run release-snesl"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@fmma-npm/http-client": "^1.3.2",
     "@fmma-npm/state": "2.0.2",
-    "@types/medium-editor": "^5.0.5",
-    "http2-proxy": "^5.0.53",
+    "@tiptap/core": "^2.12.0",
+    "@tiptap/pm": "^2.12.0",
+    "@tiptap/starter-kit": "^2.12.0",
     "image-conversion": "^2.1.1",
     "lit": "^3.3.0",
-    "medium-editor": "^5.23.3",
-    "medium-editor-colorpicker-buttons": "^0.0.4",
     "vite": "^6.3.5"
-  },
-  "dependencies": {
-    "disable-scroll": "^0.6.0"
   }
 }

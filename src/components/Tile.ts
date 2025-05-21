@@ -5,10 +5,10 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { IMG_URL_PREFIX } from '../constants';
 import { read_file } from '../functions/read_file';
 import { snap } from '../functions/snap';
+import { get_editor_text } from '../global_text_editor';
 import { State, state_manager } from '../state_manager';
 import type { Image, Pos, Rect, TextBlock, Tile } from '../types';
 import './Icon';
-import { get_editor_text } from './TextEditor';
 
 @customElement('b-tile')
 export class Btile extends LitElement {

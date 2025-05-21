@@ -23,6 +23,7 @@ import type { Bpage } from './Page';
 import './Settings';
 import './TextEditor';
 import './Tile';
+import { tiptap_editor } from '../global_text_editor';
 
 configure({
     host: API_HOST
@@ -88,18 +89,25 @@ export class Bapp extends LitElement {
     @state()
     private _site_is_new = false;
 
-    private async _load_site() {
-        const sdo = await this._get_site_object()
-        if (sdo != null) {
-            const pages = await this._get_pages(sdo.publishedVersion) ?? [{ title: 'Ny side', subPages: [], tiles: [] }];
-            state_manager.reset({ pages, sdo });
+    @state()
+    private _error: string | undefined = undefined;
 
-            setTimeout(() =>
-                this._try_set_current_page()
-            );
-        }
-        else {
-            this._site_is_new = true;
+    private async _load_site() {
+        try {
+            const sdo = await this._get_site_object()
+            if (sdo != null) {
+                const pages = await this._get_pages(sdo.publishedVersion) ?? [{ title: 'Ny side', subPages: [], tiles: [] }];
+                state_manager.reset({ pages, sdo });
+
+                setTimeout(() =>
+                    this._try_set_current_page()
+                );
+            }
+            else {
+                this._site_is_new = true;
+            }
+        } catch {
+               this._error = "Der er sket en fejl: Kunne ikke loade siden."
         }
     }
 
@@ -511,6 +519,9 @@ export class Bapp extends LitElement {
     }
 
     render() {
+        if(this._error) {
+            return html`<p>${this._error}</p>`
+        }
         if (this._site_is_new) {
             return html`<b-new-site .site_root=${this.site_root}></b-new-site>`;
         }
@@ -585,6 +596,7 @@ export class Bapp extends LitElement {
 
         if (!location.search.includes('admin'))
             return nothing;
+
 
         return this._mobile && !this._comming_from_desktop ? nothing
             : html`

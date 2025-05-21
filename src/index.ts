@@ -1,13 +1,24 @@
 
 import './components/App';
+import './components/TextEditorControls'
 import type { Bapp } from './components/App';
 
-const params = new URLSearchParams(window.location.search)
-const siteFromParams = params.get('site');
+let site = "snesltest";
 
-const siteNameFromHtml = document.getElementById('thescript')?.getAttribute('data-site');
+switch (import.meta.env.BASE_URL as string) {
+    case 'https://bregnhoj.com':
+        site = 'bregnhoj';
+        break;
+    case 'https://meisnermadsen.dk':
+        site = 'lisogkarsten';
+        break;
+    case 'https://snesl.dk/bregnhoj':
+        site = 'snesltest';
+        break;
+}
+
 const app: Bapp = document.createElement('b-app') as Bapp;
-const site = siteFromParams ?? siteNameFromHtml ?? "bregnhoj";
+
 
 app.site_root = site;
 document.body.appendChild(app);
