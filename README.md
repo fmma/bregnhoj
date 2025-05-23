@@ -1,6 +1,6 @@
 # bregnhoj.com
 
-Web site for bregnhoj.com and listogkarsten.dk.
+Web site for bregnhoj.com and meisnermadsen.dk.
 
 ## Building
 
