@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="description" content="Lisbeth Bregnhøj's Galleri" />
+    <meta name="description" content="%VITE_SITE_DESC%" />
     <link rel="stylesheet" href="/css/font.css">
     <link rel="stylesheet" href="/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-    <title>Lisbeth Bregnhøj</title>
+    <title>%VITE_SITE_TITLE%</title>
   </head>
   <body style="margin: 0px; overflow-x: hidden;">
     <script type="module" src="/src/index.ts"></script>
@@ -15,5 +15,6 @@
     <div id="editor" style="display: none; position: absolute; top:0px; z-index: 99;">
       <b-text-editor-controls></b-text-editor-controls>
     </div>
+    <b-app site-root="%VITE_SITE_ROOT%"></b-app>
   </body>
 </html>
