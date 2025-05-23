@@ -7,7 +7,7 @@ import { get_rect } from '../functions/get_rect';
 import { get_viewport } from '../functions/get_width';
 import { is_mobile } from '../functions/is_mobile';
 import { read_file } from '../functions/read_file';
-import { shuffle_iteration } from '../functions/shuffle_iteration';
+import { autotile_iteration } from '../functions/autotile_iteration';
 import { snap } from '../functions/snap';
 import { urlify } from '../functions/urlify';
 import { State, state_manager } from '../state_manager';
@@ -273,16 +273,16 @@ export class Bapp extends LitElement {
         }
     }
 
-    private _shuffle = () => {
+    private _autotile = () => {
         const tiles = this._current_page.sub != null
             ? this._pages[this._current_page.page].subPages[this._current_page.sub].tiles
             : this._pages[this._current_page.page].tiles;
 
-        let { newTiles, badness } = shuffle_iteration(tiles);
-        for (let i = 0; i < 200; ++i) {
-            const r = shuffle_iteration(tiles);
+        let { new_tiles, badness } = autotile_iteration(tiles);
+        for (let i = 0; i < 100; ++i) {
+            const r = autotile_iteration(tiles);
             if (r.badness < badness) {
-                newTiles = r.newTiles;
+                new_tiles = r.new_tiles;
                 badness = r.badness;
             }
         }
@@ -290,13 +290,13 @@ export class Bapp extends LitElement {
         if (this._current_page.sub != null) {
             const subPage = this._pages[this._current_page.page].subPages[this._current_page.sub];
             this._update_sub_page(this._current_page.page, this._current_page.sub)({
-                detail: { ...subPage, tiles: newTiles }
+                detail: { ...subPage, tiles: new_tiles }
             });
         }
         else {
             const page = this._pages[this._current_page.page]
             this._update_page(this._current_page.page)({
-                detail: { ...page, tiles: newTiles }
+                detail: { ...page, tiles: new_tiles }
             });
         }
     }
@@ -605,7 +605,7 @@ export class Bapp extends LitElement {
                     ? nothing
                     : this._editting
                         ? html`
-                            <b-icon title="Bland billeder" @click=${this._shuffle} icon="shuffle"></b-icon>
+                            <b-icon title="Bland billeder" @click=${this._autotile} icon="shuffle"></b-icon>
                             <b-icon title="Ny tekstboks" @click=${this._new_text_box} icon="edit-text"></b-icon>
                             <b-icon title="Upload billede(r)" @file-change=${this._upload_images} icon="file" file-input multiple accept="image/jpeg, image/png, image/jpg"></b-icon>
                             <b-icon title="Indstillinger" @click=${this._open_settings} .disabled=${!this._can_open_settings} icon="code"></b-icon>

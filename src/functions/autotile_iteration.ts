@@ -5,7 +5,7 @@ import { overlaps } from "./overlaps";
 import { shuffle } from "./shuffle";
 import { snap } from "./snap";
 
-export function shuffle_iteration(tiles: Tile[]) {
+export function autotile_iteration(tiles: Tile[]) {
     const new_tiles: Tile[] = [];
 
     const place_tile = (tile: Tile) => {
@@ -134,5 +134,5 @@ export function shuffle_iteration(tiles: Tile[]) {
         }
     }
 
-    return { newTiles: new_tiles, badness: badness() };
+    return { new_tiles, badness: badness() };
 }
