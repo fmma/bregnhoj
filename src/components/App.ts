@@ -1,4 +1,4 @@
-import { configure, db, media } from '@fmma-npm/http-client';
+import { configure, db, media, visitors } from '@fmma-npm/http-client';
 import { ObjPath } from '@fmma-npm/state';
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
@@ -60,6 +60,9 @@ export class Bapp extends LitElement {
     private _comming_from_desktop = false;
 
     @state()
+    private _visitors?: number;
+
+    @state()
     private _viewport = get_viewport();
 
     @state()
@@ -109,6 +112,7 @@ export class Bapp extends LitElement {
         } catch {
                this._error = "Der er sket en fejl: Kunne ikke loade siden."
         }
+        this._visitors = (await visitors.get(window.location.host))?.visitors ?? 0;
     }
 
     private get _tiles() {
@@ -577,6 +581,7 @@ export class Bapp extends LitElement {
 
                     <div class="footer">
                         <hr>
+                        <p>Besøgende: ${this._visitors ?? 0}</p>
                     </div>
                     ${this._render_overview()}
                 </div>
