@@ -581,7 +581,6 @@ export class Bapp extends LitElement {
 
                     <div class="footer">
                         <hr>
-                        <p>Besøgende: ${this._visitors ?? 0}</p>
                     </div>
                     ${this._render_overview()}
                 </div>
